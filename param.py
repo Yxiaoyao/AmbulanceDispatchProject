@@ -29,7 +29,7 @@ class AmbulanceStation:
     position: Tuple[float, float]
     ambulance_count: int
     coverage_radius: float
-    acailable_ambulances: int = 0
+    available_ambulances: int = 0
 
 @dataclass
 class ResidentialArea:

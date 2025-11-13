@@ -3,12 +3,10 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.lines import Line2D
 from scipy.spatial import Voronoi, voronoi_plot_2d
-import geopandas as gpd
-from shapely.geometry import Point, Polygon
 import random
 from typing import List, Dict, Tuple
-import pandas as pd
 
+from game_theory import GameTheory
 from param import Hospital, AmbulanceStation, ResidentialArea, Emergency, HospitalType
 
 
@@ -32,7 +30,7 @@ class AmbulanceSimulation:
         self.event_queue = []
         self.current_time = 0
         self.performance_metrics = {}
-
+        self.game_theoretic_dispatcher = GameTheory(self)
 
         np.random.seed(random_seed)
 

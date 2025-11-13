@@ -501,54 +501,123 @@ class AmbulanceSimulation:
     def _gen_road_network(self, n: int) -> List[Dict]:
         """gen road network"""
         roads = []
-        # main roads (横向)
-        for i in range(n // 2):
-            y = self.city_height * (i+1) / (n // 2 + 1)
+
+        important_nodes = [hosp.position for hosp in self.hospitals]
+        high_density_areas = [area for area in self.residential_areas if area.area_type == 'high_density']
+        important_nodes.extend([area.position for area in high_density_areas[:3]])
+
+        for i in range(min(n, len(important_nodes) - 1)):
+            start_idx = i
+            end_idx = (i + 1) % len(important_nodes)
             roads.append({
-                'id': f'R_H{i+1}',
-                'type': 'highway' if i % 3 == 0 else 'arterial',
-                'points': [(0, y), (self.city_width, y)],
-                'speed_limit': 80 if i % 3 == 0 else 60
+                'id': f'R_M{i + 1}',
+                'type': 'arterial',
+                'points': [important_nodes[start_idx], important_nodes[end_idx]],
+                'speed_limit': 60,
+                'capacity': 1000
             })
 
-        # main roads (纵向)
-        for i in range(n // 2):
-            x = self.city_width * (i+1) / (n // 2 + 1)
-            roads.append({
-                'id': f'R_V{i+1}',
-                'type': 'highway' if i % 3 == 0 else 'arterial',
-                'points': [(x, 0), (x, self.city_height)],
-                'speed_limit': 80 if i % 3 == 0 else 60
-            })
+        n_grid = n - len(roads)
+        horizontal_roads = n_grid // 2
+        vertical_roads = n_grid - horizontal_roads
 
-        # 如果还需要更多道路，随机生成连接线
-        while len(roads) < n:
-            # 连接两个随机点
-            point1 = (random.uniform(0, 1), random.uniform(0, 1))
-            point2 = (random.uniform(0, 1), random.uniform(0, 1))
-
-            points = [(p[0] * self.city_width, p[1] * self.city_height) for p in [point1, point2]]
+        for i in range(horizontal_roads):
+            y = self.city_height * (i + 1) / (horizontal_roads + 1)
             roads.append({
-                'id': f'Road_R{len(roads) + 1}',
+                'id': f'R_H{i + 1}',
                 'type': 'local',
-                'points': points,
+                'points': [(0, y), (self.city_width, y)],
                 'speed_limit': 40,
-                'name': f'local_road{len(roads) + 1}'
+                'capacity': 500
             })
+
+        for i in range(vertical_roads):
+            x = self.city_width * (i + 1) / (vertical_roads + 1)
+            roads.append({
+                'id': f'R_V{i + 1}',
+                'type': 'local',
+                'points': [(x, 0), (x, self.city_height)],
+                'speed_limit': 40,
+                'capacity': 500
+            })
+
+        # # main roads (横向)
+        # for i in range(n // 2):
+        #     y = self.city_height * (i+1) / (n // 2 + 1)
+        #     roads.append({
+        #         'id': f'R_H{i+1}',
+        #         'type': 'highway' if i % 3 == 0 else 'arterial',
+        #         'points': [(0, y), (self.city_width, y)],
+        #         'speed_limit': 80 if i % 3 == 0 else 60
+        #     })
+        #
+        # # main roads (纵向)
+        # for i in range(n // 2):
+        #     x = self.city_width * (i+1) / (n // 2 + 1)
+        #     roads.append({
+        #         'id': f'R_V{i+1}',
+        #         'type': 'highway' if i % 3 == 0 else 'arterial',
+        #         'points': [(x, 0), (x, self.city_height)],
+        #         'speed_limit': 80 if i % 3 == 0 else 60
+        #     })
+        #
+        # # 如果还需要更多道路，随机生成连接线
+        # while len(roads) < n:
+        #     # 连接两个随机点
+        #     point1 = (random.uniform(0, 1), random.uniform(0, 1))
+        #     point2 = (random.uniform(0, 1), random.uniform(0, 1))
+        #
+        #     points = [(p[0] * self.city_width, p[1] * self.city_height) for p in [point1, point2]]
+        #     roads.append({
+        #         'id': f'Road_R{len(roads) + 1}',
+        #         'type': 'local',
+        #         'points': points,
+        #         'speed_limit': 40,
+        #         'name': f'local_road{len(roads) + 1}'
+        #     })
 
         return roads
 
-    def _get_region_for_residential(self, area_type: str) -> str:
-        pass
-
     def _get_region_for_facility(self) -> str:
-        pass
+        regions = ["city_center", "suburban", "rural"]
+        weights = [0.4, 0.4, 0.2]
+        return random.choices(regions, weights=weights)[0]
+
+    def _get_region_for_residential(self, area_type: str) -> str:
+        if area_type == 'high_density':
+            return 'city_center'
+        elif area_type == 'medium_density':
+            return random.choices(["city_center", "suburban"], weights=[0.3, 0.7])[0]
+        else:
+            return 'rural'
 
     def _get_position_in_region(self, region: str) -> Tuple[float, float]:
-        pass
+        if region == 'city_center':
+            x = np.random.normal(self.city_width * 0.5, self.city_width * 0.1)
+            y = np.random.normal(self.city_height * 0.5, self.city_height * 0.1)
+        elif region == 'suburban':
+            angle = random.uniform(0, 2 * np.pi)
+            distance = random.uniform(0.2, 0.4)
+            x = 0.5 + distance * np.cos(angle) * 0.5
+            y = 0.5 + distance * np.sin(angle) * 0.5
+            x *= self.city_width
+            y *= self.city_height
+        else:
+            corner = random.choice([(0.1, 0.1), (0.1, 0.9), (0.9, 0.1), (0.9, 0.9)])
+            x = np.random.normal(corner[0], 0.1) * self.city_width
+            y = np.random.normal(corner[1], 0.1) * self.city_height
+
+        x = np.clip(x, self.city_width * 0.02, self.city_width * 0.98)
+        y = np.clip(y, self.city_height * 0.02, self.city_height * 0.98)
+        return x, y
 
     def _distribute_by_weights(self, total: int, weights: List[float]) -> List[int]:
-        pass
+        counts = [int(total * weight) for weight in weights]
+        remaining = total - sum(counts)
+        if remaining > 0:
+            max_idx = weights.index(max(weights))
+            counts[max_idx] += remaining
+        return counts
 
     def _calculate_residential_centers(self) -> List[Tuple[float, float]]:
         """calculate residential centers"""

@@ -1,7 +1,7 @@
 import numpy as np
 import random
 from param import Emergency, HospitalType, EmergencyPriority
-from createMap import AmbulanceSimulation
+from create_map import AmbulanceSimulation
 from typing import Tuple, Optional
 import heapq
 from collections import defaultdict
@@ -15,10 +15,13 @@ class EventSimulator:
         self.clock = 0
         self.performance_stats = {
             'total_emergencies': 0,
+            'served_emergencies': 0,
             'response_times': [],
             'ambulance_utilization': [],
             'hospital_utilization': [],
-            'strategy_performance': defaultdict(list)
+            'strategy_performance': defaultdict(list),
+            'waiting_times': [],
+            'service_times': []
         }
         self.ambulance_locations = {}
         self.emergency_records = {}

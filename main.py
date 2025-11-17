@@ -18,6 +18,7 @@ class AmbulanceDispatch(AmbulanceSimulation):
 
     def run_simulation(self, simulation_time: float = 24 * 60):
         self.gen_city_layout()
+        fig, ax = self.visualize_city_layout(save_plot=True)
 
         performance_stats = self.event_sim.run_simulation(simulation_time)
         self._analyze_simulation_results(performance_stats)

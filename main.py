@@ -12,12 +12,15 @@ class AmbulanceDispatch(AmbulanceSimulation):
 
     def __init__(self, city_width: float = 100, city_height: float = 100, random_seed: int = 42):
         super().__init__(city_width, city_height, random_seed)
-        self.event_sim = EventSimulator(self)
-        self.game_theoretic_dispatcher = GameTheory(self)
+        self.event_sim = None
+        self.game_theoretic_dispatcher = None
         self.simulation_results = {}
 
     def run_simulation(self, simulation_time: float = 24 * 60):
         self.gen_city_layout()
+
+        self.event_sim = EventSimulator(self)
+        self.game_theoretic_dispatcher = GameTheory(self)
         fig, ax = self.visualize_city_layout(save_plot=True)
 
         performance_stats = self.event_sim.run_simulation(simulation_time)

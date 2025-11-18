@@ -53,7 +53,3 @@ class Emergency:
     assigned_ambulance: Optional[str] = None
     assigned_hospital: Optional[str] = None
     response_time: Optional[float] = None
-
-
-
-

@@ -1,0 +1,556 @@
+{
+  "simulation_id": "20251124161601",
+  "city_dimensions": {
+    "width": 70,
+    "height": 70
+  },
+  "hospitals": [
+    {
+      "id": "H1",
+      "name": "general_hospital_1",
+      "position": [
+        35.0,
+        35.0
+      ],
+      "capacity": 302,
+      "type": "general_hospital",
+      "emergency_beds": 100,
+      "strategy": "cooperative"
+    },
+    {
+      "id": "H2",
+      "name": "community_hospital_2",
+      "position": [
+        38.41071965518655,
+        45.37366661408537
+      ],
+      "capacity": 101,
+      "type": "community_hospital",
+      "emergency_beds": 25,
+      "strategy": "balance"
+    },
+    {
+      "id": "H3",
+      "name": "general_hospital_3",
+      "position": [
+        27.21683917367156,
+        37.23231529282568
+      ],
+      "capacity": 174,
+      "type": "general_hospital",
+      "emergency_beds": 43,
+      "strategy": "balance"
+    },
+    {
+      "id": "H4",
+      "name": "general_hospital_4",
+      "position": [
+        20.923259771787606,
+        31.550376025256003
+      ],
+      "capacity": 203,
+      "type": "general_hospital",
+      "emergency_beds": 50,
+      "strategy": "competitive"
+    }
+  ],
+  "ambulance_stations": [
+    {
+      "id": "AS1",
+      "position": [
+        58.9338530618354,
+        3.3238113497529658
+      ],
+      "ambulance_count": 2,
+      "coverage_radius": 12.322370567394016
+    },
+    {
+      "id": "AS2",
+      "position": [
+        63.155552786283884,
+        60.00544960477659
+      ],
+      "ambulance_count": 4,
+      "coverage_radius": 8.976457024564294
+    },
+    {
+      "id": "AS3",
+      "position": [
+        28.643831471351525,
+        25.11387409065296
+      ],
+      "ambulance_count": 3,
+      "coverage_radius": 8.634245041729745
+    },
+    {
+      "id": "AS4",
+      "position": [
+        31.209744317177687,
+        24.28860716861805
+      ],
+      "ambulance_count": 3,
+      "coverage_radius": 9.397716475108519
+    },
+    {
+      "id": "AS5",
+      "position": [
+        35.41619028191189,
+        24.09925479794144
+      ],
+      "ambulance_count": 4,
+      "coverage_radius": 14.882616200647517
+    },
+    {
+      "id": "AS6",
+      "position": [
+        42.940374858517806,
+        34.26678116186898
+      ],
+      "ambulance_count": 4,
+      "coverage_radius": 9.193668865811041
+    },
+    {
+      "id": "AS7",
+      "position": [
+        2.7955291705683654,
+        4.958143751447063
+      ],
+      "ambulance_count": 5,
+      "coverage_radius": 9.687178262182082
+    },
+    {
+      "id": "AS8",
+      "position": [
+        41.64190000403311,
+        46.06595410227318
+      ],
+      "ambulance_count": 5,
+      "coverage_radius": 8.240719647806529
+    }
+  ],
+  "residential_areas": [
+    {
+      "id": "R1",
+      "name": "high_density_area1",
+      "position": [
+        33.393846823176304,
+        37.725442392792864
+      ],
+      "population": 12227,
+      "density": 12.637655990477874,
+      "area": 0.9675666141341164,
+      "type": "high_density"
+    },
+    {
+      "id": "R2",
+      "name": "high_density_area2",
+      "position": [
+        54.448191290867086,
+        43.35547806997622
+      ],
+      "population": 18163,
+      "density": 9.29398118867869,
+      "area": 1.9543769416468377,
+      "type": "high_density"
+    },
+    {
+      "id": "R3",
+      "name": "high_density_area3",
+      "position": [
+        36.53046821237704,
+        41.172327272640274
+      ],
+      "population": 9145,
+      "density": 14.453119645161818,
+      "area": 0.6327387530778792,
+      "type": "high_density"
+    },
+    {
+      "id": "R4",
+      "name": "high_density_area4",
+      "position": [
+        27.936402599944245,
+        23.91694050524179
+      ],
+      "population": 17255,
+      "density": 9.899443222417272,
+      "area": 1.743106263727894,
+      "type": "high_density"
+    },
+    {
+      "id": "R5",
+      "name": "medium_density_area5",
+      "position": [
+        31.486268360070586,
+        27.385576247318554
+      ],
+      "population": 8476,
+      "density": 5.427013306774358,
+      "area": 1.5618690193747615,
+      "type": "medium_density"
+    },
+    {
+      "id": "R6",
+      "name": "medium_density_area6",
+      "position": [
+        41.00238012874011,
+        46.6271007082823
+      ],
+      "population": 7910,
+      "density": 6.170784332632994,
+      "area": 1.2818484499495253,
+      "type": "medium_density"
+    },
+    {
+      "id": "R7",
+      "name": "medium_density_area7",
+      "position": [
+        45.01298200575705,
+        36.20212231230676
+      ],
+      "population": 8283,
+      "density": 7.208787923016159,
+      "area": 1.1491012873595416,
+      "type": "medium_density"
+    },
+    {
+      "id": "R8",
+      "name": "medium_density_area8",
+      "position": [
+        39.07485956299127,
+        41.2142392171535
+      ],
+      "population": 17584,
+      "density": 6.916028672163949,
+      "area": 2.5425406933718913,
+      "type": "medium_density"
+    },
+    {
+      "id": "R9",
+      "name": "medium_density_area9",
+      "position": [
+        39.89586900138856,
+        41.607015147807694
+      ],
+      "population": 7376,
+      "density": 4.296178606936362,
+      "area": 1.7169314570885452,
+      "type": "medium_density"
+    },
+    {
+      "id": "R10",
+      "name": "medium_density_area10",
+      "position": [
+        48.1449611840113,
+        36.13506434351222
+      ],
+      "population": 12168,
+      "density": 4.463476238100519,
+      "area": 2.7262068517511873,
+      "type": "medium_density"
+    },
+    {
+      "id": "R11",
+      "name": "medium_density_area11",
+      "position": [
+        30.83381372107635,
+        24.845833282316647
+      ],
+      "population": 10790,
+      "density": 6.493192507310232,
+      "area": 1.6617960497052984,
+      "type": "medium_density"
+    },
+    {
+      "id": "R12",
+      "name": "medium_density_area12",
+      "position": [
+        41.77161736523455,
+        41.20636154523973
+      ],
+      "population": 6900,
+      "density": 4.254233401144095,
+      "area": 1.6219646434313244,
+      "type": "medium_density"
+    },
+    {
+      "id": "R13",
+      "name": "low_density_area13",
+      "position": [
+        68.6,
+        1.4000000000000001
+      ],
+      "population": 13577,
+      "density": 2.9126724140656393,
+      "area": 4.66163822772898,
+      "type": "low_density"
+    },
+    {
+      "id": "R14",
+      "name": "low_density_area14",
+      "position": [
+        1.4000000000000001,
+        6.469373784802703
+      ],
+      "population": 13445,
+      "density": 3.1397343616689852,
+      "area": 4.282355145850692,
+      "type": "low_density"
+    },
+    {
+      "id": "R15",
+      "name": "low_density_area15",
+      "position": [
+        68.6,
+        65.36726876395325
+      ],
+      "population": 8854,
+      "density": 2.4813867890931722,
+      "area": 3.568198488145982,
+      "type": "low_density"
+    }
+  ],
+  "roads": [
+    {
+      "id": "R_Arterial1",
+      "type": "arterial",
+      "points": [
+        [
+          35.0,
+          35.0
+        ],
+        [
+          38.41071965518655,
+          45.37366661408537
+        ]
+      ],
+      "speed_limit": 60,
+      "capacity": 1000
+    },
+    {
+      "id": "R_Arterial2",
+      "type": "arterial",
+      "points": [
+        [
+          38.41071965518655,
+          45.37366661408537
+        ],
+        [
+          27.21683917367156,
+          37.23231529282568
+        ]
+      ],
+      "speed_limit": 60,
+      "capacity": 1000
+    },
+    {
+      "id": "R_Arterial3",
+      "type": "arterial",
+      "points": [
+        [
+          27.21683917367156,
+          37.23231529282568
+        ],
+        [
+          20.923259771787606,
+          31.550376025256003
+        ]
+      ],
+      "speed_limit": 60,
+      "capacity": 1000
+    },
+    {
+      "id": "R_Arterial4",
+      "type": "arterial",
+      "points": [
+        [
+          20.923259771787606,
+          31.550376025256003
+        ],
+        [
+          33.393846823176304,
+          37.725442392792864
+        ]
+      ],
+      "speed_limit": 60,
+      "capacity": 1000
+    },
+    {
+      "id": "R_Arterial5",
+      "type": "arterial",
+      "points": [
+        [
+          33.393846823176304,
+          37.725442392792864
+        ],
+        [
+          54.448191290867086,
+          43.35547806997622
+        ]
+      ],
+      "speed_limit": 60,
+      "capacity": 1000
+    },
+    {
+      "id": "R_Arterial6",
+      "type": "arterial",
+      "points": [
+        [
+          54.448191290867086,
+          43.35547806997622
+        ],
+        [
+          36.53046821237704,
+          41.172327272640274
+        ]
+      ],
+      "speed_limit": 60,
+      "capacity": 1000
+    },
+    {
+      "id": "R_H1",
+      "type": "local",
+      "points": [
+        [
+          0,
+          14.0
+        ],
+        [
+          70,
+          14.0
+        ]
+      ],
+      "speed_limit": 40,
+      "capacity": 500
+    },
+    {
+      "id": "R_H2",
+      "type": "local",
+      "points": [
+        [
+          0,
+          28.0
+        ],
+        [
+          70,
+          28.0
+        ]
+      ],
+      "speed_limit": 40,
+      "capacity": 500
+    },
+    {
+      "id": "R_H3",
+      "type": "local",
+      "points": [
+        [
+          0,
+          42.0
+        ],
+        [
+          70,
+          42.0
+        ]
+      ],
+      "speed_limit": 40,
+      "capacity": 500
+    },
+    {
+      "id": "R_H4",
+      "type": "local",
+      "points": [
+        [
+          0,
+          56.0
+        ],
+        [
+          70,
+          56.0
+        ]
+      ],
+      "speed_limit": 40,
+      "capacity": 500
+    },
+    {
+      "id": "R_V1",
+      "type": "local",
+      "points": [
+        [
+          11.666666666666666,
+          0
+        ],
+        [
+          11.666666666666666,
+          70
+        ]
+      ],
+      "speed_limit": 40,
+      "capacity": 500
+    },
+    {
+      "id": "R_V2",
+      "type": "local",
+      "points": [
+        [
+          23.333333333333332,
+          0
+        ],
+        [
+          23.333333333333332,
+          70
+        ]
+      ],
+      "speed_limit": 40,
+      "capacity": 500
+    },
+    {
+      "id": "R_V3",
+      "type": "local",
+      "points": [
+        [
+          35.0,
+          0
+        ],
+        [
+          35.0,
+          70
+        ]
+      ],
+      "speed_limit": 40,
+      "capacity": 500
+    },
+    {
+      "id": "R_V4",
+      "type": "local",
+      "points": [
+        [
+          46.666666666666664,
+          0
+        ],
+        [
+          46.666666666666664,
+          70
+        ]
+      ],
+      "speed_limit": 40,
+      "capacity": 500
+    },
+    {
+      "id": "R_V5",
+      "type": "local",
+      "points": [
+        [
+          58.333333333333336,
+          0
+        ],
+        [
+          58.333333333333336,
+          70
+        ]
+      ],
+      "speed_limit": 40,
+      "capacity": 500
+    }
+  ],
+  "timestamp": "2025-11-24T16:16:01.392800"
+}

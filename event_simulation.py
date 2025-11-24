@@ -33,16 +33,15 @@ class EventSimulator:
             'failed_emergencies': 0,
             'fallback_decisions': 0
         }
-        self.ambulance_locations = {}
+        self.ambulance_infos = {}
         self.emergency_records = {}
-        self.ambulance_status = {}
 
     def schedule(self, event_time: float, event_type: str, **kwargs):
         heapq.heappush(self.event_queue, (event_time, event_type, kwargs))
 
     def run_simulation(self, simulation_time: float = 24 * 60):
         print(f"run simulation: {simulation_time} min")
-        self._initialize_ambulance_locations()
+        self._initialize_ambulance_infos()
         self._generate_initial_emergencies()
 
         events_processed = 0
@@ -53,14 +52,19 @@ class EventSimulator:
             events_processed += 1
             try:
                 if event_type == 'emergency_occur':
+                    print(" ********* emergency_occur *********")
                     self._handle_emergency_occur(event_data)
                 elif event_type == 'ambulance_dispatch':
+                    print(" ********* ambulance_dispatch *********")
                     self._handle_ambulance_dispatch(event_data)
                 elif event_type == 'ambulance_arrival':
+                    print(" ********* ambulance_arrival *********")
                     self._handle_ambulance_arrival(event_data)
                 elif event_type == 'hospital_arrival':
+                    print(" ********* hospital_arrival *********")
                     self._handle_hospital_arrival(event_data)
                 elif event_type == 'ambulance_return':
+                    print(" ********* ambulance_return *********")
                     self._handle_ambulance_return(event_data)
             except Exception as e:
                 print(f"{event_type} error: {e}")
@@ -69,19 +73,13 @@ class EventSimulator:
         self._calculate_final_statistics()
         return self.performance_stats
 
-    def _initialize_ambulance_locations(self):
+    def _initialize_ambulance_infos(self):
         print("initializing ambulance locations")
         for station in self.ambulance_stations:
             for i in range(station.ambulance_count):
                 ambulance_id = f"{station.id}_amb{i + 1}"
-                self.ambulance_locations[ambulance_id] = station.position
-                self.ambulance_status[ambulance_id] = {
+                self.ambulance_infos[ambulance_id] = {
                     'location': station.position,
-                    'status': 'available',
-                    'station_id': station.id,
-                    'current_emergency': None
-                }
-                self.ambulance_status[ambulance_id] = {
                     'status': 'available',
                     'station_id': station.id,
                     'current_emergency': None
@@ -152,8 +150,8 @@ class EventSimulator:
                 ambulance_id = self._find_available_ambulance(station_id)
                 if ambulance_id:
                     # update status
-                    self.ambulance_status[ambulance_id]['status'] = 'dispatched'
-                    self.ambulance_status[ambulance_id]['current_emergency'] = emergency_id
+                    self.ambulance_infos[ambulance_id]['status'] = 'dispatched'
+                    self.ambulance_infos[ambulance_id]['current_emergency'] = emergency_id
 
                     # update event
                     emergency_record['dispatch_time'] = self.current_time
@@ -205,7 +203,7 @@ class EventSimulator:
             emergency = emergency_record['emergency']
 
             # update status
-            self.ambulance_status[ambulance_id]['status'] = 'on_scene'
+            self.ambulance_infos[ambulance_id]['status'] = 'on_scene'
             emergency_record['ambulance_arrival_time'] = self.current_time
             emergency.status = 'on_scene'
 
@@ -246,7 +244,7 @@ class EventSimulator:
             emergency = emergency_record['emergency']
 
             # update status
-            self.ambulance_status[ambulance_id]['status'] = 'transporting'
+            self.ambulance_infos[ambulance_id]['status'] = 'transporting'
             emergency_record['hospital_arrival_time'] = self.current_time
             emergency.status = 'at_hospital'
             service_time = self.current_time - emergency_record['start_time']
@@ -291,15 +289,14 @@ class EventSimulator:
             hospital.current_patients = max(0, hospital.current_patients - 1)
 
             # update amb status
-            self.ambulance_status[ambulance_id]['status'] = 'available'
-            self.ambulance_status[ambulance_id]['current_emergency'] = None
+            self.ambulance_infos[ambulance_id]['status'] = 'available'
+            self.ambulance_infos[ambulance_id]['current_emergency'] = None
 
             # return station
-            station_id = self.ambulance_status[ambulance_id]['station_id']
+            station_id = self.ambulance_infos[ambulance_id]['station_id']
             station = next(s for s in self.ambulance_stations if s.id == station_id)
             station_position = station.position
-            self.ambulance_locations[ambulance_id] = station_position
-            self.ambulance_status[ambulance_id]['location'] = station_position
+            self.ambulance_infos[ambulance_id]['location'] = station_position
 
             # cal return time
             travel_time_back = self._calculate_travel_time(
@@ -378,7 +375,7 @@ class EventSimulator:
         print("\n=== End event simulation ===")
 
     def _find_available_ambulance(self, station_id: str) -> Optional[str]:
-        for ambulance_id, ambulance_info in self.ambulance_locations.items():
+        for ambulance_id, ambulance_info in self.ambulance_infos.items():
             if ambulance_info['station_id'] == station_id and ambulance_info['status'] == 'available':
                 return ambulance_id
         return None

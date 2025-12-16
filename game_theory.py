@@ -3,7 +3,7 @@ from typing import Tuple, Optional, List
 import numpy as np
 
 from create_map import AmbulanceSimulation
-from param import Emergency, Hospital, EmergencyPriority, AmbulanceStation
+from param import Emergency, Hospital, EmergencyPriority, AmbulanceStation, MapType
 
 
 class GameTheory:
@@ -128,7 +128,13 @@ class GameTheory:
     def _calculate_travel_time(self, start: Tuple[float, float], end: Tuple[float, float]) -> float:
         try:
             distance = np.sqrt((start[0] - end[0]) ** 2 + (start[1] - end[1]) ** 2)
-            base_speed = 40
+            if hasattr(self.simulation, 'map_type'):
+                if self.simulation.map_type == MapType.RING:
+                    base_speed = 45
+                else:
+                    base_speed = 40
+            else:
+                base_speed = 40
             travel_time = (distance / base_speed) * 60
             return max(1, travel_time)
         except:

@@ -1,4 +1,5 @@
 import json
+import math
 import os
 from datetime import datetime
 import numpy as np
@@ -8,7 +9,7 @@ from matplotlib.lines import Line2D
 # from scipy.spatial import Voronoi, voronoi_plot_2d
 import random
 from typing import List, Dict, Tuple
-from param import Hospital, AmbulanceStation, ResidentialArea, Emergency, HospitalType
+from param import Hospital, AmbulanceStation, ResidentialArea, Emergency, HospitalType, MapType
 
 
 class AmbulanceSimulation:
@@ -16,7 +17,8 @@ class AmbulanceSimulation:
     救护车仿真地图
     """
 
-    def __init__(self, city_width: float = 100, city_height: float = 100, random_seed: int = 42):
+    def __init__(self, city_width: float = 100, city_height: float = 100, random_seed: int = 42,
+                 map_type: MapType = MapType.GRID):
         """
         :param city_width: 城市宽度
         :param city_height: 城市长度
@@ -32,6 +34,9 @@ class AmbulanceSimulation:
         self.current_time = 0
         self.performance_metrics = {}
         self.formatted_time = datetime.now().strftime("%Y%m%d%H%M%S")
+
+        self.map_type = map_type
+        self.city_center = (city_width / 2, city_height / 2)
 
         np.random.seed(random_seed)
 
@@ -54,8 +59,14 @@ class AmbulanceSimulation:
         self.residential_areas = self._gen_residential_areas(n_residential_areas)
 
         # 4. roads
-        print("gen roads")
-        self.roads = self._gen_road_network(n_major_roads)
+        print(f"gen roads for {self.map_type.value}")
+        if self.map_type == MapType.GRID:
+            self.roads = self._gen_grid_road_network(n_major_roads)
+        elif self.map_type == MapType.RING:
+            self.roads = self._gen_ring_road_network(n_major_roads)
+        else:
+            raise ValueError(f"Unsupported map type: {self.map_type}")
+        # self.roads = self._gen_road_network(n_major_roads)
 
         for station in self.ambulance_stations:
             station.available_ambulances = station.ambulance_count
@@ -72,17 +83,29 @@ class AmbulanceSimulation:
 
         for i in range(n):
             if i == 0:
-                x, y =self.city_width * 0.5, self.city_height * 0.5
+                if self.map_type == MapType.RING:
+                    pop_center = self._calculate_population_center()
+                    x, y = pop_center
+                    x += np.random.normal(0, self.city_width * 0.05)
+                    y += np.random.normal(0, self.city_height * 0.05)
+                else:
+                    x, y = self.city_width * 0.5, self.city_height * 0.5
                 hospital_type = HospitalType.GENERAL
                 capacity = np.random.randint(200, 350)
                 emergency_beds = capacity // 3
                 strategy = "cooperative"
             else:
                 # 基于区域
-                region = self._get_region_for_facility()
-                x, y = self._get_position_in_region(region)
+                if self.map_type == MapType.RING:
+                    angle = 2 * math.pi * i / n
+                    distance = np.random.uniform(0.2, 0.6) * min(self.city_width, self.city_height)
+                    x = self.city_center[0] + distance * math.cos(angle)
+                    y = self.city_center[1] + distance * math.sin(angle)
+                else:
+                    region = self._get_region_for_facility()
+                    x, y = self._get_position_in_region(region)
 
-                if region == "city_center" or random.random() < 0.4:
+                if i < 2 or random.random() < 0.4:
                     hospital_type = HospitalType.GENERAL
                     capacity = np.random.randint(100, 250)
                 else:
@@ -91,6 +114,9 @@ class AmbulanceSimulation:
 
                 emergency_beds = max(10, capacity // 4)
                 strategy = random.choices(strategies, weights=strategy_weights)[0]
+
+            x = np.clip(x, self.city_width * 0.02, self.city_width * 0.98)
+            y = np.clip(y, self.city_height * 0.02, self.city_height * 0.98)
 
             hospital = Hospital(
                 id=f'H{i+1}',
@@ -184,8 +210,20 @@ class AmbulanceSimulation:
             count = type_counts[type_idx]
 
             for _ in range(count):
-                region = self._get_region_for_residential(area_type['type'])
-                x, y = self._get_position_in_region(region)
+                if self.map_type == MapType.RING:
+                    if area_type['type'] == 'high_density':
+                        distance = np.random.uniform(0, 0.3) * min(self.city_width, self.city_height)
+                    elif area_type['type'] == 'medium_density':
+                        distance = np.random.uniform(0.3, 0.6) * min(self.city_width, self.city_height)
+                    else:
+                        distance = np.random.uniform(0.6, 0.9) * min(self.city_width, self.city_height)
+                    angle = np.random.uniform(0, 2 * np.pi)
+                    x = self.city_center[0] + distance * math.cos(angle)
+                    y = self.city_center[1] + distance * math.sin(angle)
+
+                else:
+                    region = self._get_region_for_residential(area_type['type'])
+                    x, y = self._get_position_in_region(region)
 
                 density = np.random.uniform(area_type['density_range'][0],
                                             area_type['density_range'][1])
@@ -205,13 +243,12 @@ class AmbulanceSimulation:
                 areas.append(residential_area)
                 area_id += 1
 
-
-
         return areas
 
 
-    def _gen_road_network(self, n: int) -> List[Dict]:
+    def _gen_grid_road_network(self, n: int) -> List[Dict]:
         """gen road network"""
+        print("Generating grid road network...")
         roads = []
 
         important_nodes = [hosp.position for hosp in self.hospitals]
@@ -256,8 +293,51 @@ class AmbulanceSimulation:
                 'capacity': 500
             })
 
+        return roads
 
+    def _gen_ring_road_network(self, n: int) -> List[Dict]:
+        print("Generating ring road network...")
+        roads = []
 
+        population_center = self._calculate_population_center()
+        center_x, center_y = population_center
+
+        n_rings = min(4, n // 3)
+        n_radials = n - n_rings
+
+        max_radius = min(self.city_width, self.city_height) * 0.45
+        for i in range(n_rings):
+            radius = max_radius * (i + 1) / (n_rings + 1)
+            circle_points = []
+            n_segments = 32  # 圆分32段
+            for j in range(n_segments + 1):
+                angle = 2 * math.pi * j / n_segments
+                x = center_x + radius * math.cos(angle)
+                y = center_y + radius * math.sin(angle)
+                x = max(0, min(self.city_width, x))
+                y = max(0, min(self.city_height, y))
+                circle_points.append((x, y))
+
+            roads.append({
+                'id': f'R_Ring{i + 1}',
+                'type': 'arterial',
+                'points': circle_points,
+                'speed_limit': 60,
+                'capacity': 1000,
+                'is_circular': True
+            })
+
+        for i in range(n_radials):
+            angle = 2 * math.pi * i / n_radials
+            end_x, end_y = self._find_boundary_intersection(center_x, center_y, angle)
+            roads.append({
+                'id': f'R_Radial{i + 1}',
+                'type': 'local',
+                'points': [(center_x, center_y), (end_x, end_y)],
+                'speed_limit': 50,
+                'capacity': 700,
+                'is_radial': True
+            })
         return roads
 
     def _get_region_for_facility(self) -> str:
@@ -362,19 +442,44 @@ class AmbulanceSimulation:
         road_legend_added = {'highway': False, 'arterial': False, 'local': False}
         for road in self.roads:
             points = np.array(road['points'])
-            if road['type'] == 'highway':
-                line_style = {'color': '#f39c12', 'linewidth': 4, 'alpha': 0.8,
-                              'linestyle': '-', 'label': 'Highway' if not road_legend_added['highway'] else ""}
-                road_legend_added['highway'] = True
-            elif road['type'] == 'arterial':
-                line_style = {'color': '#e74c3c', 'linewidth': 2.5, 'alpha': 0.7,
-                              'linestyle': '-', 'label': 'Arterial Road' if not road_legend_added['arterial'] else ""}
-                road_legend_added['arterial'] = True
-            else:  # local
-                line_style = {'color': '#7f8c8d', 'linewidth': 1.5, 'alpha': 0.6,
-                              'linestyle': '--', 'label': 'Local Road' if not road_legend_added['local'] else ""}
-                road_legend_added['local'] = True
-            ax.plot(points[:, 0], points[:, 1], **line_style)
+
+            if self.map_type == MapType.RING:
+                if road.get('is_circular', False):
+                    center_x = sum(p[0] for p in points) / len(points)
+                    center_y = sum(p[1] for p in points) / len(points)
+                    radius = np.sqrt((points[0][0] - center_x) ** 2 + (points[0][1] - center_y) ** 2)
+
+                    circle = patches.Circle((center_x, center_y), radius,
+                                            fill=False, linestyle='-', linewidth=2.5,
+                                            alpha=0.7, color='#e74c3c',
+                                            label='Ring Road' if not road_legend_added['arterial'] else "")
+                    ax.add_patch(circle)
+                    road_legend_added['arterial'] = True
+                elif road.get('is_radial', False):
+                    line_style = {'color': '#7f8c8d', 'linewidth': 1.5, 'alpha': 0.6,
+                                  'linestyle': '--', 'label': 'Radial Road' if not road_legend_added['local'] else ""}
+                    road_legend_added['local'] = True
+                    ax.plot(points[:, 0], points[:, 1], **line_style)
+                else:
+                    line_style = {'color': '#7f8c8d', 'linewidth': 1.5, 'alpha': 0.6,
+                                  'linestyle': '-', 'label': 'Local Road' if not road_legend_added['local'] else ""}
+                    road_legend_added['local'] = True
+                    ax.plot(points[:, 0], points[:, 1], **line_style)
+
+            else:
+                if road['type'] == 'highway':
+                    line_style = {'color': '#f39c12', 'linewidth': 4, 'alpha': 0.8,
+                                  'linestyle': '-', 'label': 'Highway' if not road_legend_added['highway'] else ""}
+                    road_legend_added['highway'] = True
+                elif road['type'] == 'arterial':
+                    line_style = {'color': '#e74c3c', 'linewidth': 2.5, 'alpha': 0.7,
+                                  'linestyle': '-', 'label': 'Arterial Road' if not road_legend_added['arterial'] else ""}
+                    road_legend_added['arterial'] = True
+                else:  # local
+                    line_style = {'color': '#7f8c8d', 'linewidth': 1.5, 'alpha': 0.6,
+                                  'linestyle': '--', 'label': 'Local Road' if not road_legend_added['local'] else ""}
+                    road_legend_added['local'] = True
+                ax.plot(points[:, 0], points[:, 1], **line_style)
 
         # residential areas
         if self.residential_areas:
@@ -472,3 +577,55 @@ class AmbulanceSimulation:
             print(f"city layout saved to: {filename}")
 
         return fig, ax
+
+    def _calculate_population_center(self) -> Tuple[float, float]:
+        if not self.residential_areas:
+            return self.city_center
+
+        total_population = sum(area.population for area in self.residential_areas)
+        if total_population == 0:
+            return self.city_center
+
+        weighted_x = sum(area.position[0] * area.population for area in self.residential_areas) / total_population
+        weighted_y = sum(area.position[1] * area.population for area in self.residential_areas) / total_population
+
+        return weighted_x, weighted_y
+
+    def _find_boundary_intersection(self, center_x: float, center_y: float, angle: float) -> Tuple[float, float]:
+        intersections = []
+        if math.cos(angle) < 0:  # left
+            t = -center_x/math.cos(angle)
+            y = center_y + t * math.sin(angle)
+            if 0 <= y <= self.city_height:
+                intersections.append((0, y))
+
+        if math.cos(angle) > 0:  # right
+            t = (self.city_width - center_x) / math.cos(angle)
+            y = center_y + t * math.sin(angle)
+            if 0 <= y <= self.city_height:
+                intersections.append((self.city_width, y))
+
+        if math.sin(angle) < 0:  # bottom
+            t = -center_y/math.sin(angle)
+            x = center_x + t * math.cos(angle)
+            if 0 <= x <= self.city_width:
+                intersections.append((x, 0))
+
+        if math.sin(angle) > 0:  # top
+            t = (self.city_height - center_y) / math.sin(angle)
+            x = center_y + t * math.cos(angle)
+            if 0 <= x <= self.city_width:
+                intersections.append((x, self.city_height))
+
+        if not intersections:
+            max_distance = max(self.city_width, self.city_height)
+            x = center_x + max_distance * math.cos(angle)
+            y = center_y + max_distance * math.sin(angle)
+
+            x = max(0, min(self.city_width, x))
+            y = max(0, min(self.city_height, y))
+            return x, y
+
+        distances = [(x - center_x)**2 + (y - center_y)**2 for x, y in intersections]
+        return intersections[np.argmin(distances)]
+

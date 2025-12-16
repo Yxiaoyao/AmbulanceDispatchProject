@@ -53,3 +53,8 @@ class Emergency:
     assigned_ambulance: Optional[str] = None
     assigned_hospital: Optional[str] = None
     response_time: Optional[float] = None
+
+
+class MapType(Enum):
+    GRID = "grid"  # 方型
+    RING = "ring"  # 环形

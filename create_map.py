@@ -18,13 +18,14 @@ class AmbulanceSimulation:
     """
 
     def __init__(self, city_width: float = 100, city_height: float = 100, random_seed: int = 42,
-                 map_type: MapType = MapType.GRID):
+                 map_type: MapType = MapType.GRID, ring_density_factor: float = 1.5):
         """
         :param city_width: 城市宽度
         :param city_height: 城市长度
         """
         self.city_width = city_width
         self.city_height = city_height
+        self.ring_density_factor = ring_density_factor
         self.hospitals: List[Hospital] = []  # 医院
         self.ambulance_stations: List[AmbulanceStation] = []  # 救护站
         self.residential_areas: List[ResidentialArea] = []  # 居民区
@@ -97,6 +98,10 @@ class AmbulanceSimulation:
             else:
                 # 基于区域
                 if self.map_type == MapType.RING:
+                    if i < n // 2:
+                        distance = np.random.uniform(0.1, 0.4) * min(self.city_width, self.city_height)
+                    else:
+                        distance = np.random.uniform(0.4, 0.7) * min(self.city_width, self.city_height)
                     angle = 2 * math.pi * i / n
                     distance = np.random.uniform(0.2, 0.6) * min(self.city_width, self.city_height)
                     x = self.city_center[0] + distance * math.cos(angle)
@@ -212,7 +217,7 @@ class AmbulanceSimulation:
             for _ in range(count):
                 if self.map_type == MapType.RING:
                     if area_type['type'] == 'high_density':
-                        distance = np.random.uniform(0, 0.3) * min(self.city_width, self.city_height)
+                        distance = np.random.beta(2, 5) * min(self.city_width, self.city_height) * 0.4
                     elif area_type['type'] == 'medium_density':
                         distance = np.random.uniform(0.3, 0.6) * min(self.city_width, self.city_height)
                     else:
@@ -301,44 +306,318 @@ class AmbulanceSimulation:
 
         population_center = self._calculate_population_center()
         center_x, center_y = population_center
-
-        n_rings = min(4, n // 3)
-        n_radials = n - n_rings
-
         max_radius = min(self.city_width, self.city_height) * 0.45
+
+        # ==================== 生成环形道路（同心圆）====================
+        # 使用指数分布确定环形道路的位置，使中心更密集
+        n_rings = min(6, max(3, n // 4))  # 环形道路数量，3-6个
+
+        # 生成环形道路的半径，使用指数分布使中心更密集
+        ring_radii = []
         for i in range(n_rings):
-            radius = max_radius * (i + 1) / (n_rings + 1)
+            # 指数分布：靠近中心的环更密集
+            # 使用公式：r = R_max * (i/n)^α，其中α>1使得内环更密集
+            alpha = self.ring_density_factor  # 密度因子，越大中心越密集
+
+            if n_rings > 1:
+                # 归一化的位置参数 (0到1)
+                normalized_position = i / (n_rings - 1)
+                # 应用幂律分布
+                radius = max_radius * (normalized_position ** alpha)
+            else:
+                radius = max_radius * 0.5
+
+            # 确保最小半径不为0
+            min_radius = max_radius * 0.15
+            radius = max(min_radius, radius)
+            ring_radii.append(radius)
+
+        # 按半径排序（从小到大）
+        ring_radii.sort()
+
+        # 生成环形道路
+        for i, radius in enumerate(ring_radii):
+            # 根据半径确定道路属性（中心区域道路容量更高）
+            if radius < max_radius * 0.3:
+                road_type = 'arterial'
+                speed_limit = 60
+                capacity = 1200
+                line_width = 2.5
+                color = '#e74c3c'
+                alpha = 0.8
+                label = 'Core Ring Road'
+            elif radius < max_radius * 0.6:
+                road_type = 'collector'
+                speed_limit = 50
+                capacity = 800
+                line_width = 2.0
+                color = '#f39c12'
+                alpha = 0.7
+                label = 'Middle Ring Road'
+            else:
+                road_type = 'local'
+                speed_limit = 40
+                capacity = 500
+                line_width = 1.5
+                color = '#7f8c8d'
+                alpha = 0.6
+                label = 'Outer Ring Road'
+
+            # 生成圆形道路的点（近似为多边形）
             circle_points = []
-            n_segments = 32  # 圆分32段
+            # 内环使用更多分段（更平滑），外环使用较少分段
+            n_segments = max(24, int(32 * (1 - radius / max_radius) + 16))  # 半径越小分段越多
+
             for j in range(n_segments + 1):
                 angle = 2 * math.pi * j / n_segments
                 x = center_x + radius * math.cos(angle)
                 y = center_y + radius * math.sin(angle)
+                # 确保点在城市边界内
                 x = max(0, min(self.city_width, x))
                 y = max(0, min(self.city_height, y))
                 circle_points.append((x, y))
 
             roads.append({
                 'id': f'R_Ring{i + 1}',
-                'type': 'arterial',
+                'type': road_type,
                 'points': circle_points,
-                'speed_limit': 60,
-                'capacity': 1000,
-                'is_circular': True
+                'speed_limit': speed_limit,
+                'capacity': capacity,
+                'is_circular': True,
+                'radius': radius,
+                'visual_params': {
+                    'color': color,
+                    'linewidth': line_width,
+                    'alpha': alpha,
+                    'label': label
+                }
             })
 
+        # ==================== 生成放射状道路 ====================
+        # 放射状道路数量也遵循密度梯度：中心区域放射状道路更密集
+        n_radials = n - n_rings
+
+        # 计算放射状道路的角度分布
+        radial_angles = []
+
+        # 方法：在中心区域（小半径）放置更多放射状道路
+        # 使用角度密度函数：密度 ∝ 1/r
         for i in range(n_radials):
-            angle = 2 * math.pi * i / n_radials
+            # 基础角度（均匀分布）
+            base_angle = 2 * math.pi * i / n_radials
+
+            # 添加随机扰动，但中心区域扰动较小（更规则）
+            if i < n_radials * 0.3:  # 中心区域的30%道路
+                # 中心区域：小扰动，保持规则
+                angle_variation = np.random.uniform(-0.05, 0.05) * 2 * math.pi
+            else:
+                # 外围区域：较大扰动
+                angle_variation = np.random.uniform(-0.15, 0.15) * 2 * math.pi
+
+            angle = base_angle + angle_variation
+            radial_angles.append(angle % (2 * math.pi))
+
+        # 按角度排序
+        radial_angles.sort()
+
+        # 生成放射状道路
+        for i, angle in enumerate(radial_angles):
+            # 计算放射状道路的终点（在城市边界上）
             end_x, end_y = self._find_boundary_intersection(center_x, center_y, angle)
+
+            # 根据角度位置确定道路属性
+            # 检查这个角度是否穿过中心区域的高密度环形道路
+            intersects_core = False
+            for ring_radius in ring_radii:
+                if ring_radius < max_radius * 0.4:
+                    # 粗略检查：如果角度接近已有的核心环形道路，则提升道路等级
+                    # 这里我们简单假设中心区域的放射状道路更高级
+                    if i < n_radials * 0.4:  # 前40%的放射状道路（在中心区域更密集）
+                        intersects_core = True
+                        break
+
+            if intersects_core:
+                road_type = 'arterial'
+                speed_limit = 60
+                capacity = 1000
+                line_width = 2.0
+                color = '#e74c3c'
+                alpha = 0.7
+                label = 'Core Radial Road'
+            else:
+                road_type = 'local'
+                speed_limit = 50
+                capacity = 600
+                line_width = 1.5
+                color = '#7f8c8d'
+                alpha = 0.6
+                label = 'Radial Road'
+
             roads.append({
                 'id': f'R_Radial{i + 1}',
-                'type': 'local',
+                'type': road_type,
                 'points': [(center_x, center_y), (end_x, end_y)],
-                'speed_limit': 50,
-                'capacity': 700,
-                'is_radial': True
+                'speed_limit': speed_limit,
+                'capacity': capacity,
+                'is_radial': True,
+                'angle': angle,
+                'visual_params': {
+                    'color': color,
+                    'linewidth': line_width,
+                    'alpha': alpha,
+                    'label': label
+                }
             })
+
+        # ==================== 生成连接道路（连接环形和放射状道路）====================
+        # 在环形道路交叉点之间添加连接道路，特别是在中心区域
+        n_connectors = min(5, max(0, n - len(roads)))
+
+        if n_connectors > 0 and len(ring_radii) >= 2:
+            for i in range(n_connectors):
+                # 选择两个环形道路（通常相邻）
+                ring_idx1 = np.random.randint(0, len(ring_radii) - 1)
+                ring_idx2 = ring_idx1 + 1
+
+                radius1 = ring_radii[ring_idx1]
+                radius2 = ring_radii[ring_idx2]
+
+                # 选择一个角度（倾向于在已有放射状道路之间）
+                angle = np.random.uniform(0, 2 * math.pi)
+
+                # 计算两个点
+                point1 = (
+                    center_x + radius1 * math.cos(angle),
+                    center_y + radius1 * math.sin(angle)
+                )
+                point2 = (
+                    center_x + radius2 * math.cos(angle),
+                    center_y + radius2 * math.sin(angle)
+                )
+
+                # 确保点在城市边界内
+                point1 = (max(0, min(self.city_width, point1[0])),
+                          max(0, min(self.city_height, point1[1])))
+                point2 = (max(0, min(self.city_width, point2[0])),
+                          max(0, min(self.city_height, point2[1])))
+
+                roads.append({
+                    'id': f'R_Conn{i + 1}',
+                    'type': 'local',
+                    'points': [point1, point2],
+                    'speed_limit': 40,
+                    'capacity': 400,
+                    'is_connector': True,
+                    'visual_params': {
+                        'color': '#95a5a6',
+                        'linewidth': 1.0,
+                        'alpha': 0.5,
+                        'label': 'Connector Road'
+                    }
+                })
+
+        print(f"Generated {len(roads)} roads: {n_rings} rings, {n_radials} radials, {n_connectors} connectors")
+
+        # 计算道路密度分布（用于验证）
+        self._analyze_road_density(roads, center_x, center_y, max_radius)
+
         return roads
+
+
+    def _gen_truncated_circle(self, center_x: float, center_y: float,
+                              radius: float, width: float, height: float) -> List[Tuple[float, float]]:
+        n_segments = 64
+        full_circle_points = []
+
+        for i in range(n_segments + 1):
+            angle = 2 * math.pi * i / n_segments
+            x = center_x + radius * math.cos(angle)
+            y = center_y + radius * math.sin(angle)
+            full_circle_points.append((x, y))
+
+        clipped_points = []
+        for point in full_circle_points:
+            x, y = point
+            if 0 <= x <= width and 0 <= y <= height:
+                clipped_points.append(point)
+
+        if len(clipped_points) < 2:
+            return []
+
+        angles = []
+        for point in clipped_points:
+            x, y = point
+            angle = math.atan2(y - center_y, x - center_x)
+            if angle < 0:
+                angle += 2 * math.pi
+            angles.append(angle)
+
+        sorted_indices = np.argsort(angles)
+        sorted_points = [clipped_points[i] for i in sorted_indices]
+        result_points = []
+
+        for i in range(len(sorted_points)):
+            result_points.append(sorted_points[i])
+
+            if i < len(sorted_points) - 1:
+                angle_diff = angles[sorted_indices[i + 1]] - angles[sorted_indices[i]]
+            else:
+                angle_diff = (2 * math.pi + angles[sorted_indices[0]]) - angles[sorted_indices[-1]]
+
+            if angle_diff > math.pi / 2:
+                pass
+
+        if len(result_points) < 4:
+            return []
+
+        return result_points
+
+    def _analyze_road_density(self, roads: List[Dict], center_x: float, center_y: float, max_radius: float):
+        print("=== analyze road density ===")
+        n_zones = 5
+        zone_radii = [max_radius * (i+1) / n_zones for i in range(n_zones)]
+        zone_lengths = [0.0] * n_zones
+        zone_counts = [0] * n_zones
+
+        for road in roads:
+            points = road['points']
+            avg_radius = 0.0
+            for point in points:
+                distance = math.sqrt((point[0] - center_x) ** 2 + (point[1] - center_y) ** 2)
+                avg_radius += distance
+            avg_radius /= len(points)
+
+            road_length = 0.0
+            for i in range(len(points) - 1):
+                dx = points[i + 1][0] - points[i][0]
+                dy = points[i + 1][1] - points[i][1]
+                road_length += math.sqrt(dx * dx + dy * dy)
+
+            for zone_idx in range(n_zones):
+                if avg_radius <= zone_radii[zone_idx]:
+                    zone_lengths[zone_idx] += road_length
+                    zone_counts[zone_idx] += 1
+                    break
+
+        total_city_area = self.city_width * self.city_height
+        print(f"total: {total_city_area:.1f} km²")
+        print(f"max r: {max_radius:.1f} km")
+
+        prev_radius = 0.0
+        for zone_idx in range(n_zones):
+            zone_radius = zone_radii[zone_idx]
+            zone_area = math.pi * (zone_radius ** 2 - prev_radius ** 2)
+
+            if zone_area > 0:
+                road_density = zone_lengths[zone_idx] / zone_area  # 单位面积道路长度
+            else:
+                road_density = 0.0
+
+            print(f"zone {zone_idx + 1} (radius {prev_radius:.1f}-{zone_radius:.1f} km): "
+                  f"{zone_area:.1f} km², len={zone_lengths[zone_idx]:.1f} km, "
+                  f"density={road_density:.4f} km/km², counts={zone_counts[zone_idx]}")
+
+            prev_radius = zone_radius
 
     def _get_region_for_facility(self) -> str:
         regions = ["city_center", "suburban", "rural"]
@@ -390,6 +669,8 @@ class AmbulanceSimulation:
                 'width': self.city_width,
                 'height': self.city_height
             },
+            'map_type': self.map_type.value,
+            'ring_density_factor': self.ring_density_factor if self.map_type == MapType.RING else None,
             'hospitals': [
                 {
                     'id': hosp.id,
@@ -436,7 +717,11 @@ class AmbulanceSimulation:
         ax.set_ylim(0, self.city_height)
         ax.set_xlabel('EW Distance (km)')
         ax.set_ylabel('SN Distance (km)')
-        ax.set_title('City Layout - Ambulance Dispatch Simulation', fontsize=16, fontweight='bold', pad=20)
+        title = f'City Layout - {self.map_type.value.upper()} Planning'
+        if self.map_type == MapType.RING:
+            title += f' (Density Factor: {self.ring_density_factor})'
+        title += ' - Ambulance Dispatch Simulation'
+        ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
 
         # roads
         road_legend_added = {'highway': False, 'arterial': False, 'local': False}
@@ -444,27 +729,106 @@ class AmbulanceSimulation:
             points = np.array(road['points'])
 
             if self.map_type == MapType.RING:
-                if road.get('is_circular', False):
-                    center_x = sum(p[0] for p in points) / len(points)
-                    center_y = sum(p[1] for p in points) / len(points)
-                    radius = np.sqrt((points[0][0] - center_x) ** 2 + (points[0][1] - center_y) ** 2)
+                legend_added = {
+                    'core_ring': False, 'middle_ring': False, 'outer_ring': False,
+                    'core_radial': False, 'radial': False, 'connector': False
+                }
+                for road in self.roads:
+                    points = np.array(road['points'])
+                    visual_params = road.get('visual_params', {})
 
-                    circle = patches.Circle((center_x, center_y), radius,
-                                            fill=False, linestyle='-', linewidth=2.5,
-                                            alpha=0.7, color='#e74c3c',
-                                            label='Ring Road' if not road_legend_added['arterial'] else "")
-                    ax.add_patch(circle)
-                    road_legend_added['arterial'] = True
-                elif road.get('is_radial', False):
-                    line_style = {'color': '#7f8c8d', 'linewidth': 1.5, 'alpha': 0.6,
-                                  'linestyle': '--', 'label': 'Radial Road' if not road_legend_added['local'] else ""}
-                    road_legend_added['local'] = True
-                    ax.plot(points[:, 0], points[:, 1], **line_style)
-                else:
-                    line_style = {'color': '#7f8c8d', 'linewidth': 1.5, 'alpha': 0.6,
-                                  'linestyle': '-', 'label': 'Local Road' if not road_legend_added['local'] else ""}
-                    road_legend_added['local'] = True
-                    ax.plot(points[:, 0], points[:, 1], **line_style)
+                    if road.get('is_circular', False):
+                        # 绘制圆形道路
+                        if visual_params.get('label', '').startswith('Core'):
+                            label = 'Core Ring Road' if not legend_added['core_ring'] else ""
+                            legend_added['core_ring'] = True
+                        elif visual_params.get('label', '').startswith('Middle'):
+                            label = 'Middle Ring Road' if not legend_added['middle_ring'] else ""
+                            legend_added['middle_ring'] = True
+                        else:
+                            label = 'Outer Ring Road' if not legend_added['outer_ring'] else ""
+                            legend_added['outer_ring'] = True
+
+                        # 使用视觉参数
+                        line_style = {
+                            'color': visual_params.get('color', '#e74c3c'),
+                            'linewidth': visual_params.get('linewidth', 2.5),
+                            'alpha': visual_params.get('alpha', 0.7),
+                            'linestyle': '-',
+                            'label': label
+                        }
+
+                        # 对于圆形道路，绘制闭合曲线
+                        if len(points) > 1:
+                            ax.plot(points[:, 0], points[:, 1], **line_style)
+
+                    elif road.get('is_radial', False):
+                        # 绘制放射状道路
+                        if visual_params.get('label', '').startswith('Core'):
+                            label = 'Core Radial Road' if not legend_added['core_radial'] else ""
+                            legend_added['core_radial'] = True
+                        else:
+                            label = 'Radial Road' if not legend_added['radial'] else ""
+                            legend_added['radial'] = True
+
+                        line_style = {
+                            'color': visual_params.get('color', '#7f8c8d'),
+                            'linewidth': visual_params.get('linewidth', 1.5),
+                            'alpha': visual_params.get('alpha', 0.6),
+                            'linestyle': '--',
+                            'label': label
+                        }
+
+                        ax.plot(points[:, 0], points[:, 1], **line_style)
+
+                    elif road.get('is_connector', False):
+                        # 绘制连接道路
+                        label = 'Connector Road' if not legend_added['connector'] else ""
+                        legend_added['connector'] = True
+
+                        line_style = {
+                            'color': visual_params.get('color', '#95a5a6'),
+                            'linewidth': visual_params.get('linewidth', 1.0),
+                            'alpha': visual_params.get('alpha', 0.5),
+                            'linestyle': ':',
+                            'label': label
+                        }
+
+                        ax.plot(points[:, 0], points[:, 1], **line_style)
+
+                    else:
+                        # 其他道路
+                        line_style = {
+                            'color': '#7f8c8d',
+                            'linewidth': 1.5,
+                            'alpha': 0.6,
+                            'linestyle': '-',
+                            'label': 'Local Road' if not legend_added.get('other', False) else ""
+                        }
+                        legend_added['other'] = True
+                        ax.plot(points[:, 0], points[:, 1], **line_style)
+
+                # if road.get('is_circular', False):
+                #     center_x = sum(p[0] for p in points) / len(points)
+                #     center_y = sum(p[1] for p in points) / len(points)
+                #     radius = np.sqrt((points[0][0] - center_x) ** 2 + (points[0][1] - center_y) ** 2)
+                #
+                #     circle = patches.Circle((center_x, center_y), radius,
+                #                             fill=False, linestyle='-', linewidth=2.5,
+                #                             alpha=0.7, color='#e74c3c',
+                #                             label='Ring Road' if not road_legend_added['arterial'] else "")
+                #     ax.add_patch(circle)
+                #     road_legend_added['arterial'] = True
+                # elif road.get('is_radial', False):
+                #     line_style = {'color': '#7f8c8d', 'linewidth': 1.5, 'alpha': 0.6,
+                #                   'linestyle': '--', 'label': 'Radial Road' if not road_legend_added['local'] else ""}
+                #     road_legend_added['local'] = True
+                #     ax.plot(points[:, 0], points[:, 1], **line_style)
+                # else:
+                #     line_style = {'color': '#7f8c8d', 'linewidth': 1.5, 'alpha': 0.6,
+                #                   'linestyle': '-', 'label': 'Local Road' if not road_legend_added['local'] else ""}
+                #     road_legend_added['local'] = True
+                #     ax.plot(points[:, 0], points[:, 1], **line_style)
 
             else:
                 if road['type'] == 'highway':
@@ -593,6 +957,7 @@ class AmbulanceSimulation:
 
     def _find_boundary_intersection(self, center_x: float, center_y: float, angle: float) -> Tuple[float, float]:
         intersections = []
+
         if math.cos(angle) < 0:  # left
             t = -center_x/math.cos(angle)
             y = center_y + t * math.sin(angle)
@@ -629,3 +994,52 @@ class AmbulanceSimulation:
         distances = [(x - center_x)**2 + (y - center_y)**2 for x, y in intersections]
         return intersections[np.argmin(distances)]
 
+    def _gen_ring_road_network_old(self, n: int) -> List[Dict]:
+        """旧的环形道路网络生成方法（保持向后兼容）"""
+        print("Generating old ring road network...")
+        roads = []
+
+        population_center = self._calculate_population_center()
+        center_x, center_y = population_center
+
+        n_rings = min(4, n // 3)
+        n_radials = n - n_rings
+
+        max_radius = min(self.city_width, self.city_height) * 0.45
+
+        for i in range(n_rings):
+            radius = max_radius * (i + 1) / (n_rings + 1)
+
+            circle_points = []
+            n_segments = 32
+            for j in range(n_segments + 1):
+                angle = 2 * math.pi * j / n_segments
+                x = center_x + radius * math.cos(angle)
+                y = center_y + radius * math.sin(angle)
+                x = max(0, min(self.city_width, x))
+                y = max(0, min(self.city_height, y))
+                circle_points.append((x, y))
+
+            roads.append({
+                'id': f'R_Ring{i + 1}',
+                'type': 'arterial',
+                'points': circle_points,
+                'speed_limit': 60,
+                'capacity': 1000,
+                'is_circular': True
+            })
+
+        for i in range(n_radials):
+            angle = 2 * math.pi * i / n_radials
+            end_x, end_y = self._find_boundary_intersection(center_x, center_y, angle)
+
+            roads.append({
+                'id': f'R_Radial{i + 1}',
+                'type': 'local',
+                'points': [(center_x, center_y), (end_x, end_y)],
+                'speed_limit': 50,
+                'capacity': 700,
+                'is_radial': True
+            })
+
+        return roads

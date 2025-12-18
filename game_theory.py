@@ -1,3 +1,4 @@
+import math
 from typing import Tuple, Optional, List
 
 import numpy as np
@@ -125,20 +126,26 @@ class GameTheory:
         to_hospital_time = self._calculate_travel_time(emergency_pos, hospital_pos)
         return to_scene_time + on_scene_time + to_hospital_time
 
+    # def _calculate_travel_time(self, start: Tuple[float, float], end: Tuple[float, float]) -> float:
+    #     try:
+    #         distance = np.sqrt((start[0] - end[0]) ** 2 + (start[1] - end[1]) ** 2)
+    #         if hasattr(self.simulation, 'map_type'):
+    #             if self.simulation.map_type == MapType.RING:
+    #                 base_speed = 45
+    #             else:
+    #                 base_speed = 40
+    #         else:
+    #             base_speed = 40
+    #         travel_time = (distance / base_speed) * 60
+    #         return max(1, travel_time)
+    #     except:
+    #         return 10
+
     def _calculate_travel_time(self, start: Tuple[float, float], end: Tuple[float, float]) -> float:
-        try:
-            distance = np.sqrt((start[0] - end[0]) ** 2 + (start[1] - end[1]) ** 2)
-            if hasattr(self.simulation, 'map_type'):
-                if self.simulation.map_type == MapType.RING:
-                    base_speed = 45
-                else:
-                    base_speed = 40
-            else:
-                base_speed = 40
-            travel_time = (distance / base_speed) * 60
-            return max(1, travel_time)
-        except:
-            return 10
+        if hasattr(self.simulation, 'map_type') and self.simulation.map_type == MapType.RING:
+            return self._calculate_travel_time_ring(start, end)
+        else:
+            return self._calculate_travel_time_fallback(start, end)
 
     def _get_strategy_adjustment(self, strategy: str, hospital: Hospital, priority: EmergencyPriority) -> float:
         capacity_utilization = hospital.current_patients / hospital.emergency_beds
@@ -198,3 +205,48 @@ class GameTheory:
 
         return available
 
+    def _calculate_travel_time_ring(self, start: Tuple[float, float], end: Tuple[float, float]) -> float:
+        try:
+            center_x, center_y = self.simulation.city_center
+            start_dx = start[0] - center_x
+            start_dy = start[1] - center_y
+            end_dx = end[0] - center_x
+            end_dy = end[1] - center_y
+            start_radius = math.sqrt(start_dx ** 2 + start_dy ** 2)
+            end_radius = math.sqrt(end_dx ** 2 + end_dy ** 2)
+
+            if start_dx == 0 and start_dy == 0:
+                start_angle = 0
+            else:
+                start_angle = math.atan2(start_dy, start_dx) % (2 * math.pi)
+            if end_dx == 0 and end_dy == 0:
+                end_angle = 0
+            else:
+                end_angle = math.atan2(end_dy, end_dx) % (2 * math.pi)
+            angle_diff = abs(end_angle - start_angle)
+            angle_diff = min(angle_diff, 2 * math.pi - angle_diff)
+            max_city_radius = min(self.simulation.city_width, self.simulation.city_height) * 0.5
+            radial_distance = abs(start_radius - end_radius)
+            angular_distance = angle_diff * min(start_radius, end_radius)
+
+            effective_distance = radial_distance + angular_distance * 0.8
+            base_speed = 50
+            if start_radius < max_city_radius * 0.3 or end_radius < max_city_radius * 0.3:
+                base_speed *= 1.2  # 中心区域速度快20%
+
+            travel_time = (effective_distance / base_speed) * 60
+            return max(1.0, travel_time)
+
+        except Exception as e:
+            print(f"Error in ring travel time calculation: {e}")
+            # 回退到欧氏距离计算
+            return self._calculate_travel_time_fallback(start, end)
+
+    def _calculate_travel_time_fallback(self, start: Tuple[float, float], end: Tuple[float, float]) -> float:
+        try:
+            distance = np.sqrt((start[0] - end[0]) ** 2 + (start[1] - end[1]) ** 2)
+            base_speed = 40
+            travel_time = (distance / base_speed) * 60
+            return max(1, travel_time)
+        except:
+            return 10

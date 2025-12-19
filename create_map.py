@@ -306,38 +306,42 @@ class AmbulanceSimulation:
 
         population_center = self._calculate_population_center()
         center_x, center_y = population_center
-        max_radius = min(self.city_width, self.city_height) * 0.45
-
-        # ==================== 生成环形道路（同心圆）====================
-        # 使用指数分布确定环形道路的位置，使中心更密集
-        n_rings = min(6, max(3, n // 4))  # 环形道路数量，3-6个
-
-        # 生成环形道路的半径，使用指数分布使中心更密集
+        distances_to_boundary = [
+            center_x,
+            self.city_width - center_x,
+            center_y,
+            self.city_height - center_y
+        ]
+        max_radius = min(distances_to_boundary) * 0.85
+        n_rings = min(7, max(4, n // 3))
         ring_radii = []
+
         for i in range(n_rings):
-            # 指数分布：靠近中心的环更密集
-            # 使用公式：r = R_max * (i/n)^α，其中α>1使得内环更密集
-            alpha = self.ring_density_factor  # 密度因子，越大中心越密集
+            alpha = self.ring_density_factor
 
             if n_rings > 1:
-                # 归一化的位置参数 (0到1)
                 normalized_position = i / (n_rings - 1)
-                # 应用幂律分布
                 radius = max_radius * (normalized_position ** alpha)
+                if i >= n_rings - 2:
+                    adjustment = 1.0 + (0.1 * (i - (n_rings - 2)))
+                    radius = min(radius * adjustment, max_radius * 0.95)
             else:
                 radius = max_radius * 0.5
 
-            # 确保最小半径不为0
-            min_radius = max_radius * 0.15
+            min_radius = max_radius * 0.1
             radius = max(min_radius, radius)
             ring_radii.append(radius)
 
-        # 按半径排序（从小到大）
         ring_radii.sort()
 
-        # 生成环形道路
+        if ring_radii:
+            ring_radii[-1] = max(ring_radii[-1], max_radius * 0.9)
+
+        print(f"Generated {len(ring_radii)} ring roads, max radius: {max(ring_radii):.1f} km")
+        print(f"Edge rings (last 2): {ring_radii[-2]:.1f} km, {ring_radii[-1]:.1f} km")
+
         for i, radius in enumerate(ring_radii):
-            # 根据半径确定道路属性（中心区域道路容量更高）
+            is_edge_ring = i >= len(ring_radii) - 2
             if radius < max_radius * 0.3:
                 road_type = 'arterial'
                 speed_limit = 60
@@ -357,16 +361,14 @@ class AmbulanceSimulation:
             else:
                 road_type = 'local'
                 speed_limit = 40
-                capacity = 500
-                line_width = 1.5
-                color = '#7f8c8d'
-                alpha = 0.6
-                label = 'Outer Ring Road'
+                capacity = 600 if is_edge_ring else 500
+                line_width = 1.8 if is_edge_ring else 1.5
+                color = '#3498db' if is_edge_ring else '#7f8c8d'
+                alpha = 0.7 if is_edge_ring else 0.6
+                label = 'Edge Ring Road' if is_edge_ring else 'Outer Ring Road'
 
-            # 生成圆形道路的点（近似为多边形）
             circle_points = []
-            # 内环使用更多分段（更平滑），外环使用较少分段
-            n_segments = max(24, int(32 * (1 - radius / max_radius) + 16))  # 半径越小分段越多
+            n_segments = max(24, int(32 * (1 - radius / max_radius) + 16))
 
             for j in range(n_segments + 1):
                 angle = 2 * math.pi * j / n_segments
@@ -377,6 +379,16 @@ class AmbulanceSimulation:
                 y = max(0, min(self.city_height, y))
                 circle_points.append((x, y))
 
+            is_truncated = False
+            boundary_points = 0
+            for point in circle_points:
+                x, y = point
+                if x == 0 or x == self.city_width or y == 0 or y == self.city_height:
+                    boundary_points += 1
+
+            if boundary_points > n_segments * 0.1:
+                is_truncated = True
+
             roads.append({
                 'id': f'R_Ring{i + 1}',
                 'type': road_type,
@@ -385,6 +397,8 @@ class AmbulanceSimulation:
                 'capacity': capacity,
                 'is_circular': True,
                 'radius': radius,
+                'is_edge_ring': is_edge_ring,
+                'is_truncated': is_truncated,
                 'visual_params': {
                     'color': color,
                     'linewidth': line_width,
@@ -393,48 +407,33 @@ class AmbulanceSimulation:
                 }
             })
 
-        # ==================== 生成放射状道路 ====================
-        # 放射状道路数量也遵循密度梯度：中心区域放射状道路更密集
-        n_radials = n - n_rings
-
-        # 计算放射状道路的角度分布
+        n_radials = n - len(roads)
         radial_angles = []
 
-        # 方法：在中心区域（小半径）放置更多放射状道路
-        # 使用角度密度函数：密度 ∝ 1/r
         for i in range(n_radials):
-            # 基础角度（均匀分布）
             base_angle = 2 * math.pi * i / n_radials
 
-            # 添加随机扰动，但中心区域扰动较小（更规则）
-            if i < n_radials * 0.3:  # 中心区域的30%道路
-                # 中心区域：小扰动，保持规则
+            if i < n_radials * 0.3:
                 angle_variation = np.random.uniform(-0.05, 0.05) * 2 * math.pi
             else:
-                # 外围区域：较大扰动
                 angle_variation = np.random.uniform(-0.15, 0.15) * 2 * math.pi
 
             angle = base_angle + angle_variation
             radial_angles.append(angle % (2 * math.pi))
-
-        # 按角度排序
         radial_angles.sort()
 
-        # 生成放射状道路
         for i, angle in enumerate(radial_angles):
-            # 计算放射状道路的终点（在城市边界上）
             end_x, end_y = self._find_boundary_intersection(center_x, center_y, angle)
-
-            # 根据角度位置确定道路属性
-            # 检查这个角度是否穿过中心区域的高密度环形道路
             intersects_core = False
             for ring_radius in ring_radii:
                 if ring_radius < max_radius * 0.4:
-                    # 粗略检查：如果角度接近已有的核心环形道路，则提升道路等级
-                    # 这里我们简单假设中心区域的放射状道路更高级
-                    if i < n_radials * 0.4:  # 前40%的放射状道路（在中心区域更密集）
+                    if i < n_radials * 0.4:
                         intersects_core = True
                         break
+
+            is_edge_radial = False
+            if i > n_radials * 0.7:
+                is_edge_radial = True
 
             if intersects_core:
                 road_type = 'arterial'
@@ -444,6 +443,14 @@ class AmbulanceSimulation:
                 color = '#e74c3c'
                 alpha = 0.7
                 label = 'Core Radial Road'
+            elif is_edge_radial:
+                road_type = 'local'
+                speed_limit = 45
+                capacity = 600
+                line_width = 1.5
+                color = '#3498db'
+                alpha = 0.6
+                label = 'Edge Radial Road'
             else:
                 road_type = 'local'
                 speed_limit = 50
@@ -461,6 +468,7 @@ class AmbulanceSimulation:
                 'capacity': capacity,
                 'is_radial': True,
                 'angle': angle,
+                'is_edge_radial': is_edge_radial,
                 'visual_params': {
                     'color': color,
                     'linewidth': line_width,
@@ -469,23 +477,22 @@ class AmbulanceSimulation:
                 }
             })
 
-        # ==================== 生成连接道路（连接环形和放射状道路）====================
-        # 在环形道路交叉点之间添加连接道路，特别是在中心区域
-        n_connectors = min(5, max(0, n - len(roads)))
+        n_connectors = min(6, max(0, n - len(roads)))
 
         if n_connectors > 0 and len(ring_radii) >= 2:
             for i in range(n_connectors):
-                # 选择两个环形道路（通常相邻）
-                ring_idx1 = np.random.randint(0, len(ring_radii) - 1)
-                ring_idx2 = ring_idx1 + 1
+                if i < n_connectors // 2:
+                    ring_idx1 = len(ring_radii) - 2
+                    ring_idx2 = len(ring_radii) - 1
+                else:
+                    # 随机选择两个环形道路
+                    ring_idx1 = np.random.randint(0, len(ring_radii) - 1)
+                    ring_idx2 = ring_idx1 + 1
 
                 radius1 = ring_radii[ring_idx1]
                 radius2 = ring_radii[ring_idx2]
-
-                # 选择一个角度（倾向于在已有放射状道路之间）
                 angle = np.random.uniform(0, 2 * math.pi)
 
-                # 计算两个点
                 point1 = (
                     center_x + radius1 * math.cos(angle),
                     center_y + radius1 * math.sin(angle)
@@ -494,12 +501,11 @@ class AmbulanceSimulation:
                     center_x + radius2 * math.cos(angle),
                     center_y + radius2 * math.sin(angle)
                 )
-
-                # 确保点在城市边界内
                 point1 = (max(0, min(self.city_width, point1[0])),
                           max(0, min(self.city_height, point1[1])))
                 point2 = (max(0, min(self.city_width, point2[0])),
                           max(0, min(self.city_height, point2[1])))
+                is_edge_connector = i < n_connectors // 2
 
                 roads.append({
                     'id': f'R_Conn{i + 1}',
@@ -508,21 +514,22 @@ class AmbulanceSimulation:
                     'speed_limit': 40,
                     'capacity': 400,
                     'is_connector': True,
+                    'is_edge_connector': is_edge_connector,
                     'visual_params': {
-                        'color': '#95a5a6',
+                        'color': '#3498db' if is_edge_connector else '#95a5a6',
                         'linewidth': 1.0,
                         'alpha': 0.5,
-                        'label': 'Connector Road'
+                        'label': 'Edge Connector' if is_edge_connector else 'Connector Road'
                     }
                 })
 
-        print(f"Generated {len(roads)} roads: {n_rings} rings, {n_radials} radials, {n_connectors} connectors")
-
-        # 计算道路密度分布（用于验证）
+        print(f"Generated {len(roads)} roads: {len(ring_radii)} rings "
+              f"(including {len([r for r in roads if r.get('is_edge_ring', False)])} edge rings), "
+              f"{n_radials} radials, {n_connectors} connectors")
         self._analyze_road_density(roads, center_x, center_y, max_radius)
+        self._analyze_edge_rings(roads, center_x, center_y, min(distances_to_boundary))
 
         return roads
-
 
     def _gen_truncated_circle(self, center_x: float, center_y: float,
                               radius: float, width: float, height: float) -> List[Tuple[float, float]]:
@@ -720,6 +727,9 @@ class AmbulanceSimulation:
         title = f'City Layout - {self.map_type.value.upper()} Planning'
         if self.map_type == MapType.RING:
             title += f' (Density Factor: {self.ring_density_factor})'
+            has_edge_rings = any(road.get('is_edge_ring', False) for road in self.roads)
+            if has_edge_rings:
+                title += ' - With Edge Ring Roads'
         title += ' - Ambulance Dispatch Simulation'
         ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
 
@@ -730,26 +740,30 @@ class AmbulanceSimulation:
 
             if self.map_type == MapType.RING:
                 legend_added = {
-                    'core_ring': False, 'middle_ring': False, 'outer_ring': False,
-                    'core_radial': False, 'radial': False, 'connector': False
+                    'core_ring': False, 'middle_ring': False, 'edge_ring': False,
+                    'core_radial': False, 'radial': False, 'edge_radial': False,
+                    'connector': False, 'edge_connector': False
                 }
                 for road in self.roads:
                     points = np.array(road['points'])
                     visual_params = road.get('visual_params', {})
+                    if len(points) < 2:
+                        continue
 
                     if road.get('is_circular', False):
-                        # 绘制圆形道路
-                        if visual_params.get('label', '').startswith('Core'):
-                            label = 'Core Ring Road' if not legend_added['core_ring'] else ""
+                        if road.get('is_edge_ring', False):
+                            label = 'Edge Ring Road' if not legend_added['edge_ring'] else ""
+                            legend_added['edge_ring'] = True
+                        elif visual_params.get('label', '').startswith('Core'):
+                            label = 'Center Ring Road' if not legend_added['core_ring'] else ""
                             legend_added['core_ring'] = True
                         elif visual_params.get('label', '').startswith('Middle'):
                             label = 'Middle Ring Road' if not legend_added['middle_ring'] else ""
                             legend_added['middle_ring'] = True
                         else:
-                            label = 'Outer Ring Road' if not legend_added['outer_ring'] else ""
+                            label = 'Side Ring Road' if not legend_added.get('outer_ring', False) else ""
                             legend_added['outer_ring'] = True
 
-                        # 使用视觉参数
                         line_style = {
                             'color': visual_params.get('color', '#e74c3c'),
                             'linewidth': visual_params.get('linewidth', 2.5),
@@ -757,14 +771,16 @@ class AmbulanceSimulation:
                             'linestyle': '-',
                             'label': label
                         }
-
-                        # 对于圆形道路，绘制闭合曲线
-                        if len(points) > 1:
-                            ax.plot(points[:, 0], points[:, 1], **line_style)
+                        ax.plot(points[:, 0], points[:, 1], **line_style)
+                        if road.get('is_edge_ring', False) and road.get('is_truncated', False) and len(points) > 2:
+                            ax.scatter(points[0, 0], points[0, 1], s=40, c='#e74c3c', alpha=0.8, zorder=5, marker='s')
+                            ax.scatter(points[-1, 0], points[-1, 1], s=40, c='#e74c3c', alpha=0.8, zorder=5, marker='s')
 
                     elif road.get('is_radial', False):
-                        # 绘制放射状道路
-                        if visual_params.get('label', '').startswith('Core'):
+                        if road.get('is_edge_radial', False):
+                            label = 'Edge Radial Road' if not legend_added['edge_radial'] else ""
+                            legend_added['edge_radial'] = True
+                        elif visual_params.get('label', '').startswith('Core'):
                             label = 'Core Radial Road' if not legend_added['core_radial'] else ""
                             legend_added['core_radial'] = True
                         else:
@@ -778,13 +794,15 @@ class AmbulanceSimulation:
                             'linestyle': '--',
                             'label': label
                         }
-
                         ax.plot(points[:, 0], points[:, 1], **line_style)
 
                     elif road.get('is_connector', False):
-                        # 绘制连接道路
-                        label = 'Connector Road' if not legend_added['connector'] else ""
-                        legend_added['connector'] = True
+                        if road.get('is_edge_connector', False):
+                            label = 'Edge Connector' if not legend_added['edge_connector'] else ""
+                            legend_added['edge_connector'] = True
+                        else:
+                            label = 'Connector Road' if not legend_added['connector'] else ""
+                            legend_added['connector'] = True
 
                         line_style = {
                             'color': visual_params.get('color', '#95a5a6'),
@@ -793,11 +811,9 @@ class AmbulanceSimulation:
                             'linestyle': ':',
                             'label': label
                         }
-
                         ax.plot(points[:, 0], points[:, 1], **line_style)
 
                     else:
-                        # 其他道路
                         line_style = {
                             'color': '#7f8c8d',
                             'linewidth': 1.5,
@@ -829,6 +845,32 @@ class AmbulanceSimulation:
                 #                   'linestyle': '-', 'label': 'Local Road' if not road_legend_added['local'] else ""}
                 #     road_legend_added['local'] = True
                 #     ax.plot(points[:, 0], points[:, 1], **line_style)
+                edge_buffer = patches.Rectangle((0, 0), self.city_width, self.city_height,
+                                                fill=False, linestyle='--', linewidth=2,
+                                                edgecolor='#2c3e50', alpha=0.5, label='City Boundary')
+                ax.add_patch(edge_buffer)
+                center_x, center_y = self.city_center
+                distances_to_boundary = [
+                    center_x,
+                    self.city_width - center_x,
+                    center_y,
+                    self.city_height - center_y
+                ]
+                min_distance_to_boundary = min(distances_to_boundary)
+                edge_rings = [road for road in self.roads if road.get('is_edge_ring', False)]
+
+                if edge_rings:
+                    max_edge_radius = max(road.get('radius', 0) for road in edge_rings)
+
+                    edge_circle = patches.Circle((center_x, center_y), max_edge_radius,
+                                                 fill=False, linestyle=':', linewidth=1.5,
+                                                 edgecolor='#3498db', alpha=0.7)
+                    ax.add_patch(edge_circle)
+                    ax.text(center_x, center_y + max_edge_radius + 2,
+                            f'Edge Ring Road Zone',
+                            fontsize=9, color='#3498db', alpha=0.8,
+                            horizontalalignment='center',
+                            bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="#3498db", alpha=0.8))
 
             else:
                 if road['type'] == 'highway':
@@ -896,35 +938,96 @@ class AmbulanceSimulation:
                                         fill=True, linestyle='--', alpha=0.15, color='#27ae60')
                 ax.add_patch(circle)
 
-        legend_elements = [
-            Line2D([0], [0], marker='^', color='w', markerfacecolor='#c0392b',
-                   markersize=12, label='General Hospital', markeredgecolor='darkred'),
-            Line2D([0], [0], marker='s', color='w', markerfacecolor='#e74c3c',
-                   markersize=10, label='Community Hospital', markeredgecolor='darkred'),
-            Line2D([0], [0], marker='s', color='w', markerfacecolor='#27ae60',
-                   markersize=10, label='Ambulance Station', markeredgecolor='#229954'),
-            Line2D([0], [0], marker='o', color='w', markerfacecolor='#e74c3c',
-                   markersize=10, label='High Density Area', alpha=0.7),
-            Line2D([0], [0], marker='o', color='w', markerfacecolor='#f39c12',
-                   markersize=8, label='Medium Density Area', alpha=0.7),
-            Line2D([0], [0], marker='o', color='w', markerfacecolor='#27ae60',
-                   markersize=6, label='Low Density Area', alpha=0.7),
-            Line2D([0], [0], color='#e74c3c', linewidth=3, label='Arterial Road'),
-            Line2D([0], [0], color='#7f8c8d', linewidth=2, linestyle='--', label='Local Road'),
-        ]
+        if self.map_type == MapType.RING:
+            legend_elements = [
+                Line2D([0], [0], marker='^', color='w', markerfacecolor='#c0392b',
+                       markersize=12, label='General Hospital', markeredgecolor='darkred'),
+                Line2D([0], [0], marker='s', color='w', markerfacecolor='#e74c3c',
+                       markersize=10, label='Community Hospital', markeredgecolor='darkred'),
+                Line2D([0], [0], marker='s', color='w', markerfacecolor='#27ae60',
+                       markersize=10, label='Ambulance Station', markeredgecolor='#229954'),
+                Line2D([0], [0], marker='o', color='w', markerfacecolor='#e74c3c',
+                       markersize=10, label='High Density Area', alpha=0.7),
+                Line2D([0], [0], marker='o', color='w', markerfacecolor='#f39c12',
+                       markersize=8, label='Medium Density Area', alpha=0.7),
+                Line2D([0], [0], marker='o', color='w', markerfacecolor='#27ae60',
+                       markersize=6, label='Low Density Area', alpha=0.7),
+                Line2D([0], [0], color='#e74c3c', linewidth=3, label='Core Ring Road'),
+                Line2D([0], [0], color='#f39c12', linewidth=2.5, label='Middle Ring Road'),
+                Line2D([0], [0], color='#3498db', linewidth=2, label='Edge Ring Road'),
+                Line2D([0], [0], color='#e74c3c', linewidth=2, linestyle='--', label='Core Radial Road'),
+                Line2D([0], [0], color='#7f8c8d', linewidth=1.5, linestyle='--', label='Radial Road'),
+                Line2D([0], [0], color='#3498db', linewidth=1.5, linestyle='--', label='Edge Radial Road'),
+                Line2D([0], [0], color='#95a5a6', linewidth=1, linestyle=':', label='Connector Road'),
+                Line2D([0], [0], color='#3498db', linewidth=1, linestyle=':', label='Edge Connector'),
+                Line2D([0], [0], color='#2c3e50', linewidth=2, linestyle='--', label='City Boundary'),
+            ]
+        else:
+            legend_elements = [
+                Line2D([0], [0], marker='^', color='w', markerfacecolor='#c0392b',
+                       markersize=12, label='General Hospital', markeredgecolor='darkred'),
+                Line2D([0], [0], marker='s', color='w', markerfacecolor='#e74c3c',
+                       markersize=10, label='Community Hospital', markeredgecolor='darkred'),
+                Line2D([0], [0], marker='s', color='w', markerfacecolor='#27ae60',
+                       markersize=10, label='Ambulance Station', markeredgecolor='#229954'),
+                Line2D([0], [0], marker='o', color='w', markerfacecolor='#e74c3c',
+                       markersize=10, label='High Density Area', alpha=0.7),
+                Line2D([0], [0], marker='o', color='w', markerfacecolor='#f39c12',
+                       markersize=8, label='Medium Density Area', alpha=0.7),
+                Line2D([0], [0], marker='o', color='w', markerfacecolor='#27ae60',
+                       markersize=6, label='Low Density Area', alpha=0.7),
+                Line2D([0], [0], color='#e74c3c', linewidth=3, label='Arterial Road'),
+                Line2D([0], [0], color='#7f8c8d', linewidth=2, linestyle='--', label='Local Road'),
+            ]
 
         ax.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(0.02, 0.98))
 
         # statistics
+        if self.map_type == MapType.RING:
+            ring_count = sum(1 for road in self.roads if road.get('is_circular', False))
+            edge_ring_count = sum(1 for road in self.roads if road.get('is_edge_ring', False))
+            truncated_count = sum(1 for road in self.roads if road.get('is_truncated', False))
+            max_ring_radius = 0
+
+            for road in self.roads:
+                if road.get('is_circular', False) and 'radius' in road:
+                    max_ring_radius = max(max_ring_radius, road['radius'])
+
+            center_x, center_y = self.city_center
+            distances_to_boundary = [
+                center_x,
+                self.city_width - center_x,
+                center_y,
+                self.city_height - center_y
+            ]
+            min_distance_to_boundary = min(distances_to_boundary)
+
+            if max_ring_radius > 0:
+                distance_to_boundary = min_distance_to_boundary - max_ring_radius
+
+                ring_info = f"• Total Ring Roads: {ring_count}\n"
+                ring_info += f"• Edge Ring Roads: {edge_ring_count}\n"
+                ring_info += f"• Truncated Rings: {truncated_count}\n"
+                ring_info += f"• Max Ring Radius: {max_ring_radius:.1f} km\n"
+                ring_info += f"• Distance to Boundary: {distance_to_boundary:.1f} km\n"
+                ring_info += f"• Edge zones have ring roads ✓"
+            else:
+                ring_info = "• No ring roads generated"
+        else:
+            ring_info = "• Grid Layout: Complete Road Network"
+
         stats_text = f"""
-                City Statistics:
-                • Area: {self.city_width * self.city_height:.0f} km²
-                • Hospitals: {len(self.hospitals)}
-                • Ambulance Stations: {len(self.ambulance_stations)}
-                • Residential Areas: {len(self.residential_areas)}
-                • Total Population: {sum(area.population for area in self.residential_areas):,}
-                • Total Ambulances: {sum(station.ambulance_count for station in self.ambulance_stations)}
-                """
+                    City Statistics:
+                    • Layout Type: {self.map_type.value.upper()}
+                    • Area: {self.city_width * self.city_height:.0f} km²
+                    • Hospitals: {len(self.hospitals)}
+                    • Ambulance Stations: {len(self.ambulance_stations)}
+                    • Residential Areas: {len(self.residential_areas)}
+                    • Total Population: {sum(area.population for area in self.residential_areas):,}
+                    • Total Ambulances: {sum(station.ambulance_count for station in self.ambulance_stations)}
+                    • Total Roads: {len(self.roads)}
+                    {ring_info}
+                    """
 
         ax.text(0.98, 0.98, stats_text, transform=ax.transAxes,
                 fontsize=10, verticalalignment='top', horizontalalignment='right',
@@ -995,7 +1098,6 @@ class AmbulanceSimulation:
         return intersections[np.argmin(distances)]
 
     def _gen_ring_road_network_old(self, n: int) -> List[Dict]:
-        """旧的环形道路网络生成方法（保持向后兼容）"""
         print("Generating old ring road network...")
         roads = []
 
@@ -1043,3 +1145,26 @@ class AmbulanceSimulation:
             })
 
         return roads
+
+    def _analyze_edge_rings(self, roads: List[Dict], center_x: float, center_y: float, city_radius: float):
+        print("\n=== Edge Ring Road Analysis ===")
+        edge_rings = [road for road in roads if road.get('is_edge_ring', False)]
+
+        if not edge_rings:
+            print("No edge ring roads found")
+            return
+        print(f"Edge ring roads: {len(edge_rings)}")
+
+        for i, road in enumerate(edge_rings):
+            radius = road.get('radius', 0)
+            distance_to_boundary = city_radius - radius
+
+            print(f"Edge Ring {i + 1}: radius={radius:.1f} km, "
+                  f"distance to boundary={distance_to_boundary:.1f} km, "
+                  f"truncated={road.get('is_truncated', False)}")
+
+        if edge_rings:
+            max_edge_radius = max(road.get('radius', 0) for road in edge_rings)
+            coverage_ratio = max_edge_radius / city_radius * 100
+            print(f"Edge ring coverage: {coverage_ratio:.1f}% of city radius")
+            print(f"Edge zones have ring roads ")

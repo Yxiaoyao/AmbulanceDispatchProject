@@ -408,25 +408,29 @@ class AmbulanceSimulation:
             })
 
         n_radials = n - len(roads)
-        radial_angles = []
-        n_groups = 4
-        angles_per_group = n_radials // n_groups
 
-        for group in range(n_groups):
-            base_angle = 2 * math.pi * group / n_groups
-
-            for j in range(angles_per_group):
-                local_base = 2 * math.pi * j / angles_per_group
-                angle = base_angle + local_base / n_groups
-                angle_variation = np.random.uniform(-0.03, 0.03) * 2 * math.pi
-                angle = (angle + angle_variation) % (2 * math.pi)
-                radial_angles.append(angle)
-
-        remaining = n_radials - len(radial_angles)
-        if remaining > 0:
-            for i in range(remaining):
-                angle = 2 * math.pi * i / remaining
-                radial_angles.append(angle)
+        radial_angles = self._generate_uniform_angles_optimal(n_radials)
+        if n_radials >= 8:
+            radial_angles = self._optimize_angle_distribution(radial_angles, iterations=50)
+        # radial_angles = []
+        # n_groups = 4
+        # angles_per_group = n_radials // n_groups
+        #
+        # for group in range(n_groups):
+        #     base_angle = 2 * math.pi * group / n_groups
+        #
+        #     for j in range(angles_per_group):
+        #         local_base = 2 * math.pi * j / angles_per_group
+        #         angle = base_angle + local_base / n_groups
+        #         angle_variation = np.random.uniform(-0.03, 0.03) * 2 * math.pi
+        #         angle = (angle + angle_variation) % (2 * math.pi)
+        #         radial_angles.append(angle)
+        #
+        # remaining = n_radials - len(radial_angles)
+        # if remaining > 0:
+        #     for i in range(remaining):
+        #         angle = 2 * math.pi * i / remaining
+        #         radial_angles.append(angle)
 
         # for i in range(n_radials):
         #     base_angle = 2 * math.pi * i / n_radials
@@ -443,76 +447,78 @@ class AmbulanceSimulation:
 
         for i, angle in enumerate(radial_angles):
             end_x, end_y = self._find_boundary_intersection(center_x, center_y, angle)
-            intersects_core = False
-            for ring_radius in ring_radii:
-                if ring_radius < max_radius * 0.4:
-                    is_important_angle = False
-                    for j in [0, 1, 2]:  # main direction
-                        if abs(angle - j * math.pi / 2) < math.pi / 8:
-                            is_important_angle = True
-                            break
+            road_type, visual_params = self._classify_radial_road(i, angle, n_radials, ring_radii, max_radius)
+            dx = end_x - center_x
+            dy = end_y - center_y
+            road_length = math.sqrt(dx ** 2 + dy ** 2)
 
-                    if i < n_radials * 0.25 or is_important_angle:
-                        intersects_core = True
-                        break
+            # intersects_core = False
+            # for ring_radius in ring_radii:
+            #     if ring_radius < max_radius * 0.4:
+            #         is_important_angle = False
+            #         for j in [0, 1, 2]:  # main direction
+            #             if abs(angle - j * math.pi / 2) < math.pi / 8:
+            #                 is_important_angle = True
+            #                 break
+            #
+            #         if i < n_radials * 0.25 or is_important_angle:
+            #             intersects_core = True
+            #             break
 
                     # if i < n_radials * 0.4:
                     #     intersects_core = True
                     #     break
 
-            is_edge_radial = False
-            ring_crossings = 0
-
-            for ring_radius in ring_radii:
-                if ring_radius > max_radius * 0.6:
-                    ring_crossings += 1
-
-            if ring_crossings >= 2 and angle % (math.pi / 4) < 0.1:
-                is_edge_radial = True
+            # is_edge_radial = False
+            # ring_crossings = 0
+            #
+            # for ring_radius in ring_radii:
+            #     if ring_radius > max_radius * 0.6:
+            #         ring_crossings += 1
+            #
+            # if ring_crossings >= 2 and angle % (math.pi / 4) < 0.1:
+            #     is_edge_radial = True
 
             # if i > n_radials * 0.7:
             #     is_edge_radial = True
 
-            if intersects_core:
-                road_type = 'arterial'
-                speed_limit = 60
-                capacity = 1000
-                line_width = 2.0
-                color = '#e74c3c'
-                alpha = 0.7
-                label = 'Core Radial Road'
-            elif is_edge_radial:
-                road_type = 'local'
-                speed_limit = 45
-                capacity = 600
-                line_width = 1.5
-                color = '#3498db'
-                alpha = 0.6
-                label = 'Edge Radial Road'
-            else:
-                road_type = 'local'
-                speed_limit = 50
-                capacity = 600
-                line_width = 1.5
-                color = '#7f8c8d'
-                alpha = 0.6
-                label = 'Radial Road'
+            # if intersects_core:
+            #     road_type = 'arterial'
+            #     speed_limit = 60
+            #     capacity = 1000
+            #     line_width = 2.0
+            #     color = '#e74c3c'
+            #     alpha = 0.7
+            #     label = 'Core Radial Road'
+            # elif is_edge_radial:
+            #     road_type = 'local'
+            #     speed_limit = 45
+            #     capacity = 600
+            #     line_width = 1.5
+            #     color = '#3498db'
+            #     alpha = 0.6
+            #     label = 'Edge Radial Road'
+            # else:
+            #     road_type = 'local'
+            #     speed_limit = 50
+            #     capacity = 600
+            #     line_width = 1.5
+            #     color = '#7f8c8d'
+            #     alpha = 0.6
+            #     label = 'Radial Road'
 
             roads.append({
                 'id': f'R_Radial{i + 1}',
                 'type': road_type,
                 'points': [(center_x, center_y), (end_x, end_y)],
-                'speed_limit': speed_limit,
-                'capacity': capacity,
+                'speed_limit': visual_params['speed_limit'],
+                'capacity': visual_params['capacity'],
                 'is_radial': True,
                 'angle': angle,
-                'is_edge_radial': is_edge_radial,
-                'visual_params': {
-                    'color': color,
-                    'linewidth': line_width,
-                    'alpha': alpha,
-                    'label': label
-                }
+                'length': road_length,
+                'is_edge_radial': visual_params.get('is_edge_radial', False),
+                'is_cardinal': visual_params.get('is_cardinal', False),
+                'visual_params': visual_params
             })
 
         n_connectors = min(6, max(0, n - len(roads)))
@@ -523,13 +529,33 @@ class AmbulanceSimulation:
                     ring_idx1 = len(ring_radii) - 2
                     ring_idx2 = len(ring_radii) - 1
                 else:
-                    # 随机选择两个环形道路
                     ring_idx1 = np.random.randint(0, len(ring_radii) - 1)
                     ring_idx2 = ring_idx1 + 1
 
                 radius1 = ring_radii[ring_idx1]
                 radius2 = ring_radii[ring_idx2]
-                angle = np.random.uniform(0, 2 * math.pi)
+
+                # angle = np.random.uniform(0, 2 * math.pi)
+
+                candidate_angles = []
+                for j in range(36):
+                    candidate_angle = 2 * math.pi * j / 36
+                    too_close = False
+                    for existing_angle in radial_angles:
+                        diff = abs(candidate_angle - existing_angle) % (2 * math.pi)
+                        diff = min(diff, 2 * math.pi - diff)
+                        if diff < math.pi / 18:  # 10
+                            too_close = True
+                            break
+
+                    if not too_close:
+                        candidate_angles.append(candidate_angle)
+
+                if candidate_angles:
+                    angle = random.choice(candidate_angles)
+                else:
+                    angle = np.random.uniform(0, 2 * math.pi)
+
 
                 point1 = (
                     center_x + radius1 * math.cos(angle),
@@ -993,11 +1019,11 @@ class AmbulanceSimulation:
                 Line2D([0], [0], color='#e74c3c', linewidth=3, label='Core Ring Road'),
                 Line2D([0], [0], color='#f39c12', linewidth=2.5, label='Middle Ring Road'),
                 Line2D([0], [0], color='#3498db', linewidth=2, label='Edge Ring Road'),
-                Line2D([0], [0], color='#e74c3c', linewidth=2, linestyle='--', label='Core Radial Road'),
-                Line2D([0], [0], color='#7f8c8d', linewidth=1.5, linestyle='--', label='Radial Road'),
-                Line2D([0], [0], color='#3498db', linewidth=1.5, linestyle='--', label='Edge Radial Road'),
+                Line2D([0], [0], color='#e74c3c', linewidth=2, linestyle='-', label='Cardinal Radial Road'),
+                Line2D([0], [0], color='#f39c12', linewidth=1.8, linestyle='-', label='Secondary Radial Road'),
+                Line2D([0], [0], color='#3498db', linewidth=1.6, linestyle='-', label='Edge Radial Road'),
+                Line2D([0], [0], color='#2ecc71', linewidth=1.5, linestyle='-', label='Radial Road (NE)'),
                 Line2D([0], [0], color='#95a5a6', linewidth=1, linestyle=':', label='Connector Road'),
-                Line2D([0], [0], color='#3498db', linewidth=1, linestyle=':', label='Edge Connector'),
                 Line2D([0], [0], color='#2c3e50', linewidth=2, linestyle='--', label='City Boundary'),
             ]
         else:
@@ -1276,3 +1302,239 @@ class AmbulanceSimulation:
 
                 print(f"  {direction} ({start_angle:3d}°-{end_angle:3d}°): {count:2d} roads "
                       f"(expected: {expected:.1f}, deviation: {deviation:.1f}%)")
+
+    def _generate_uniform_angles_fibonacci(self, n_radials: int) -> List[float]:
+        """Fibonacci method"""
+        if n_radials <= 0:
+            return []
+
+        angles = []
+        golden_angle = math.pi * (3 - math.sqrt(5))
+
+        for i in range(n_radials):
+            # Fibonacci
+            angle = (i * golden_angle) % (2 * math.pi)
+
+            if n_radials > 4:
+                perturbation = np.random.uniform(-0.01, 0.01) * 2 * math.pi
+                angle = (angle + perturbation) % (2 * math.pi)
+
+            angles.append(angle)
+
+        return angles
+
+    def _halton_sequence(self, index: int, base: int) -> float:
+        """Halton sequence"""
+        result = 0.0
+        f = 1.0 / base
+        i = index + 1
+
+        while i > 0:
+            result += f * (i % base)
+            i = i // base
+            f = f / base
+
+        return result
+
+    def _generate_uniform_angles_optimal(self, n_radials: int) -> List[float]:
+        if n_radials <= 0:
+            return []
+
+        angles = []
+
+        if n_radials <= 12:
+            return [2 * math.pi * i / n_radials for i in range(n_radials)]
+
+        # main roads
+        cardinal_angles = [0, math.pi / 2, math.pi, 3 * math.pi / 2]  # 东、北、西、南
+        for angle in cardinal_angles:
+            angles.append(angle)
+
+        # other roads
+        if n_radials >= 8:
+            intercardinal_angles = [math.pi / 4, 3 * math.pi / 4, 5 * math.pi / 4, 7 * math.pi / 4]  # 东北、西北、西南、东南
+            for angle in intercardinal_angles:
+                angle_exists = False
+                for existing_angle in angles:
+                    diff = abs(angle - existing_angle) % (2 * math.pi)
+                    if diff < 0.001:
+                        angle_exists = True
+                        break
+
+                if not angle_exists:
+                    angles.append(angle)
+
+        # 3. Halton sequence
+        remaining = n_radials - len(angles)
+        if remaining > 0:
+            # base=3
+            for i in range(remaining):
+                index = len(angles)
+                angle = self._halton_sequence(index, base=3) * 2 * math.pi
+                min_distance = 2 * math.pi / n_radials * 0.8
+                too_close = True
+                attempts = 0
+
+                while too_close and attempts < 10:
+                    too_close = False
+                    for existing_angle in angles:
+                        diff = abs(angle - existing_angle) % (2 * math.pi)
+                        diff = min(diff, 2 * math.pi - diff)
+                        if diff < min_distance:
+                            too_close = True
+                            angle = (angle + min_distance * 1.1) % (2 * math.pi)
+                            attempts += 1
+                            break
+
+                angles.append(angle)
+
+        return angles
+
+    def _classify_radial_road(self, index: int, angle: float, total_radials: int, ring_radii: List[float],
+                              max_radius: float) -> Tuple[str, Dict]:
+
+        angle_deg = angle * 180 / math.pi
+        is_cardinal = False
+        # main
+        for cardinal_angle in [0, 90, 180, 270]:
+            diff = min(abs(angle_deg - cardinal_angle), 360 - abs(angle_deg - cardinal_angle))
+            if diff < 5:
+                is_cardinal = True
+                break
+
+        # others
+        is_intercardinal = False
+        for intercardinal_angle in [45, 135, 225, 315]:
+            diff = min(abs(angle_deg - intercardinal_angle), 360 - abs(angle_deg - intercardinal_angle))
+            if diff < 5:
+                is_intercardinal = True
+                break
+
+        is_edge_radial = False
+        for edge_angle in [22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5]:
+            diff = min(abs(angle_deg - edge_angle), 360 - abs(angle_deg - edge_angle))
+            if diff < 8 and not is_cardinal and not is_intercardinal:
+                is_edge_radial = True
+                break
+
+        if is_cardinal:
+            road_type = 'arterial'
+            speed_limit = 60
+            capacity = 1000
+            line_width = 2.0
+            color = '#e74c3c'
+            alpha = 0.8
+            label = 'Cardinal Radial Road'
+
+        elif is_intercardinal:
+            road_type = 'collector'
+            speed_limit = 55
+            capacity = 800
+            line_width = 1.8
+            color = '#f39c12'
+            alpha = 0.7
+            label = 'Secondary Radial Road'
+
+        elif is_edge_radial:
+            road_type = 'local'
+            speed_limit = 45
+            capacity = 600
+            line_width = 1.6
+            color = '#3498db'
+            alpha = 0.7
+            label = 'Edge Radial Road'
+
+        else:
+            road_type = 'local'
+            speed_limit = 50
+            capacity = 600
+
+            angle_deg_normalized = angle_deg % 360
+            if 0 <= angle_deg_normalized < 90:
+                color = '#2ecc71'
+            elif 90 <= angle_deg_normalized < 180:
+                color = '#9b59b6'
+            elif 180 <= angle_deg_normalized < 270:
+                color = '#e67e22'
+            else:
+                color = '#1abc9c'
+
+            line_width = 1.5
+            alpha = 0.6
+            label = 'Radial Road'
+
+        intersects_core = False
+        for ring_radius in ring_radii:
+            if ring_radius < max_radius * 0.4:
+                intersects_core = True
+                break
+
+        if intersects_core and (is_cardinal or is_intercardinal):
+            road_type = 'arterial'
+            speed_limit = 65
+            capacity = 1200
+            line_width = 2.2
+            label = 'Core ' + label
+
+        return road_type, {
+            'speed_limit': speed_limit,
+            'capacity': capacity,
+            'color': color,
+            'linewidth': line_width,
+            'alpha': alpha,
+            'label': label,
+            'is_cardinal': is_cardinal,
+            'is_edge_radial': is_edge_radial
+        }
+
+    def _optimize_angle_distribution(self, angles: List[float], iterations: int = 100) -> List[float]:
+        """
+        Lloyd method
+        """
+        if len(angles) <= 1:
+            return angles
+
+        points = [np.exp(1j * angle) for angle in angles]
+
+        for iteration in range(iterations):
+            # Voronoi
+            angles_sorted = sorted(angles)
+            n = len(angles_sorted)
+            boundaries = []
+
+            for i in range(n):
+                prev_angle = angles_sorted[(i - 1) % n]
+                curr_angle = angles_sorted[i]
+                next_angle = angles_sorted[(i + 1) % n]
+
+                if i == 0:
+                    prev_angle -= 2 * math.pi
+                if i == n - 1:
+                    next_angle += 2 * math.pi
+
+                left_boundary = (prev_angle + curr_angle) / 2
+                right_boundary = (curr_angle + next_angle) / 2
+                left_boundary %= 2 * math.pi
+                right_boundary %= 2 * math.pi
+                boundaries.append((left_boundary, right_boundary))
+
+            new_angles = []
+            for i in range(n):
+                left, right = boundaries[i]
+
+                if left <= right:
+                    new_angle = (left + right) / 2
+                else:
+                    segment_length = (right + 2 * math.pi - left) % (2 * math.pi)
+                    new_angle = (left + segment_length / 2) % (2 * math.pi)
+
+                new_angles.append(new_angle)
+            angles = new_angles
+
+            if iteration > 0:
+                max_change = max(abs(new - old) for new, old in zip(new_angles, angles_sorted))
+                if max_change < 0.001:
+                    print(f"The Angle optimization converges after the {iteration} iteration")
+                    break
+
+        return angles

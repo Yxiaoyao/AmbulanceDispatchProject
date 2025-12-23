@@ -409,31 +409,69 @@ class AmbulanceSimulation:
 
         n_radials = n - len(roads)
         radial_angles = []
+        n_groups = 4
+        angles_per_group = n_radials // n_groups
 
-        for i in range(n_radials):
-            base_angle = 2 * math.pi * i / n_radials
+        for group in range(n_groups):
+            base_angle = 2 * math.pi * group / n_groups
 
-            if i < n_radials * 0.3:
-                angle_variation = np.random.uniform(-0.05, 0.05) * 2 * math.pi
-            else:
-                angle_variation = np.random.uniform(-0.15, 0.15) * 2 * math.pi
+            for j in range(angles_per_group):
+                local_base = 2 * math.pi * j / angles_per_group
+                angle = base_angle + local_base / n_groups
+                angle_variation = np.random.uniform(-0.03, 0.03) * 2 * math.pi
+                angle = (angle + angle_variation) % (2 * math.pi)
+                radial_angles.append(angle)
 
-            angle = base_angle + angle_variation
-            radial_angles.append(angle % (2 * math.pi))
+        remaining = n_radials - len(radial_angles)
+        if remaining > 0:
+            for i in range(remaining):
+                angle = 2 * math.pi * i / remaining
+                radial_angles.append(angle)
+
+        # for i in range(n_radials):
+        #     base_angle = 2 * math.pi * i / n_radials
+        #
+        #     if i < n_radials * 0.3:
+        #         angle_variation = np.random.uniform(-0.05, 0.05) * 2 * math.pi
+        #     else:
+        #         angle_variation = np.random.uniform(-0.15, 0.15) * 2 * math.pi
+        #
+        #     angle = base_angle + angle_variation
+        #     radial_angles.append(angle % (2 * math.pi))
         radial_angles.sort()
+        self._check_angle_distribution(radial_angles)
 
         for i, angle in enumerate(radial_angles):
             end_x, end_y = self._find_boundary_intersection(center_x, center_y, angle)
             intersects_core = False
             for ring_radius in ring_radii:
                 if ring_radius < max_radius * 0.4:
-                    if i < n_radials * 0.4:
+                    is_important_angle = False
+                    for j in [0, 1, 2]:  # main direction
+                        if abs(angle - j * math.pi / 2) < math.pi / 8:
+                            is_important_angle = True
+                            break
+
+                    if i < n_radials * 0.25 or is_important_angle:
                         intersects_core = True
                         break
 
+                    # if i < n_radials * 0.4:
+                    #     intersects_core = True
+                    #     break
+
             is_edge_radial = False
-            if i > n_radials * 0.7:
+            ring_crossings = 0
+
+            for ring_radius in ring_radii:
+                if ring_radius > max_radius * 0.6:
+                    ring_crossings += 1
+
+            if ring_crossings >= 2 and angle % (math.pi / 4) < 0.1:
                 is_edge_radial = True
+
+            # if i > n_radials * 0.7:
+            #     is_edge_radial = True
 
             if intersects_core:
                 road_type = 'arterial'
@@ -1060,42 +1098,63 @@ class AmbulanceSimulation:
 
     def _find_boundary_intersection(self, center_x: float, center_y: float, angle: float) -> Tuple[float, float]:
         intersections = []
+        angle = angle % (2 * math.pi)
 
         if math.cos(angle) < 0:  # left
-            t = -center_x/math.cos(angle)
-            y = center_y + t * math.sin(angle)
-            if 0 <= y <= self.city_height:
-                intersections.append((0, y))
+            t_left = -center_x/math.cos(angle) if math.cos(angle) != 0 else float('inf')
+            if t_left >= 0:
+                y_left = center_y + t_left * math.sin(angle)
+                if 0 <= y_left <= self.city_height:
+                    intersections.append((0, y_left))
 
         if math.cos(angle) > 0:  # right
-            t = (self.city_width - center_x) / math.cos(angle)
-            y = center_y + t * math.sin(angle)
-            if 0 <= y <= self.city_height:
-                intersections.append((self.city_width, y))
+            t_right = (self.city_width - center_x) / math.cos(angle) if math.cos(angle) != 0 else float('inf')
+            if t_right >= 0:
+                y_right = center_y + t_right * math.sin(angle)
+                if 0 <= y_right <= self.city_height:
+                    intersections.append((self.city_width, y_right))
 
         if math.sin(angle) < 0:  # bottom
-            t = -center_y/math.sin(angle)
-            x = center_x + t * math.cos(angle)
-            if 0 <= x <= self.city_width:
-                intersections.append((x, 0))
+            t_bottom = -center_y/math.sin(angle) if math.sin(angle) != 0 else float('inf')
+            if t_bottom >= 0:
+                x_bottom = center_x + t_bottom * math.cos(angle)
+                if 0 <= x_bottom <= self.city_width:
+                    intersections.append((x_bottom, 0))
 
         if math.sin(angle) > 0:  # top
-            t = (self.city_height - center_y) / math.sin(angle)
-            x = center_y + t * math.cos(angle)
-            if 0 <= x <= self.city_width:
-                intersections.append((x, self.city_height))
+            t_top = (self.city_height - center_y) / math.sin(angle) if math.sin(angle) != 0 else float('inf')
+            if t_top >= 0:
+                x_top = center_y + t_top * math.cos(angle)
+                if 0 <= x_top <= self.city_width:
+                    intersections.append((x_top, self.city_height))
 
-        if not intersections:
-            max_distance = max(self.city_width, self.city_height)
-            x = center_x + max_distance * math.cos(angle)
-            y = center_y + max_distance * math.sin(angle)
+        if intersections:
+            distances = [(x - center_x) ** 2 + (y - center_y) ** 2 for x, y in intersections]
+            min_idx = np.argmin(distances)
+            return intersections[min_idx]
 
-            x = max(0, min(self.city_width, x))
-            y = max(0, min(self.city_height, y))
-            return x, y
+        print(f"Warning: No valid intersection found for angle {angle:.2f} rad ({angle * 180 / math.pi:.1f}°)")
 
-        distances = [(x - center_x)**2 + (y - center_y)**2 for x, y in intersections]
-        return intersections[np.argmin(distances)]
+        if angle < math.pi / 4 or angle > 7 * math.pi / 4:
+            return (self.city_width, center_y)  # 东
+        elif angle < 3 * math.pi / 4:
+            return (center_x, self.city_height)  # 北
+        elif angle < 5 * math.pi / 4:
+            return (0, center_y)  # 西
+        else:
+            return (center_x, 0)  # 南
+
+        # if not intersections:
+        #     max_distance = max(self.city_width, self.city_height)
+        #     x = center_x + max_distance * math.cos(angle)
+        #     y = center_y + max_distance * math.sin(angle)
+        #
+        #     x = max(0, min(self.city_width, x))
+        #     y = max(0, min(self.city_height, y))
+        #     return x, y
+        #
+        # distances = [(x - center_x)**2 + (y - center_y)**2 for x, y in intersections]
+        # return intersections[np.argmin(distances)]
 
     def _gen_ring_road_network_old(self, n: int) -> List[Dict]:
         print("Generating old ring road network...")
@@ -1168,3 +1227,52 @@ class AmbulanceSimulation:
             coverage_ratio = max_edge_radius / city_radius * 100
             print(f"Edge ring coverage: {coverage_ratio:.1f}% of city radius")
             print(f"Edge zones have ring roads ")
+
+    def _check_angle_distribution(self, angles: List[float]):
+        if not angles:
+            return
+
+        n_angles = len(angles)
+        print(f"Total radial roads: {n_angles}")
+        angles_sorted = sorted(angles)
+        angle_diffs = []
+
+        for i in range(n_angles):
+            next_i = (i + 1) % n_angles
+            diff = (angles_sorted[next_i] - angles_sorted[i]) % (2 * math.pi)
+            angle_diffs.append(diff)
+
+        if angle_diffs:
+            avg_diff = np.mean(angle_diffs)
+            max_diff = np.max(angle_diffs)
+            min_diff = np.min(angle_diffs)
+
+            print(f"Average angle spacing: {avg_diff * 180 / math.pi:.1f}°")
+            print(f"Max angle spacing: {max_diff * 180 / math.pi:.1f}°")
+            print(f"Min angle spacing: {min_diff * 180 / math.pi:.1f}°")
+
+            large_gaps = [d for d in angle_diffs if d > avg_diff * 2]
+            if large_gaps:
+                print(f"Warning: Found {len(large_gaps)} large gaps")
+
+            n_sectors = 8
+            sector_counts = [0] * n_sectors
+
+            for angle in angles:
+                sector_idx = int(angle / (2 * math.pi) * n_sectors)
+                sector_counts[sector_idx] += 1
+
+            print("\nSector distribution (45° sectors):")
+            for i in range(n_sectors):
+                start_angle = i * 45
+                end_angle = (i + 1) * 45
+                count = sector_counts[i]
+                expected = n_angles / n_sectors
+                deviation = abs(count - expected) / expected * 100 if expected > 0 else 0
+
+                direction_names = ['East', 'Northeast', 'North', 'Northwest',
+                                   'West', 'Southwest', 'South', 'Southeast']
+                direction = direction_names[i]
+
+                print(f"  {direction} ({start_angle:3d}°-{end_angle:3d}°): {count:2d} roads "
+                      f"(expected: {expected:.1f}, deviation: {deviation:.1f}%)")

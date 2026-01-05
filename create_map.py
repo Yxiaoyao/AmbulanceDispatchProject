@@ -9,7 +9,7 @@ from matplotlib.lines import Line2D
 # from scipy.spatial import Voronoi, voronoi_plot_2d
 import random
 from typing import List, Dict, Tuple
-from param import Hospital, AmbulanceStation, ResidentialArea, Emergency, HospitalType, MapType
+from param import Hospital, AmbulanceStation, ResidentialArea, Emergency, HospitalType, MapType, EmergencyPriority
 
 
 class AmbulanceSimulation:
@@ -203,9 +203,12 @@ class AmbulanceSimulation:
         """gen residential areas location"""
         areas = []
         area_types = [
-            {'type': 'high_density', 'weight': 0.3, 'density_range': (8, 15), 'size_range': (0.5, 2.0)},
-            {'type': 'medium_density', 'weight': 0.5, 'density_range': (4, 8), 'size_range': (1.0, 3.0)},
-            {'type': 'low_density', 'weight': 0.2, 'density_range': (1, 4), 'size_range': (2.0, 5.0)}
+            {'type': 'high_density', 'weight': 0.3, 'density_range': (8, 15), 'size_range': (0.5, 2.0),
+             'width_range': (1.5, 3.0), 'height_range': (1.5, 3.0)},
+            {'type': 'medium_density', 'weight': 0.5, 'density_range': (4, 8), 'size_range': (1.0, 3.0),
+             'width_range': (2.0, 4.0), 'height_range': (2.0, 4.0)},
+            {'type': 'low_density', 'weight': 0.2, 'density_range': (1, 4), 'size_range': (2.0, 5.0),
+             'width_range': (3.0, 6.0), 'height_range': (3.0, 6.0)}
         ]
 
         type_counts = self._distribute_by_weights(n, [t['weight'] for t in area_types])
@@ -230,10 +233,20 @@ class AmbulanceSimulation:
                     region = self._get_region_for_residential(area_type['type'])
                     x, y = self._get_position_in_region(region)
 
+                x = np.clip(x, self.city_width * 0.02, self.city_width * 0.98)
+                y = np.clip(y, self.city_height * 0.02, self.city_height * 0.98)
+                width = np.random.uniform(area_type['width_range'][0], area_type['width_range'][1])
+                height = np.random.uniform(area_type['height_range'][0], area_type['height_range'][1])
+                max_width = min(x - self.city_width * 0.02, self.city_width * 0.98 - x) * 2
+                max_height = min(y - self.city_height * 0.02, self.city_height * 0.98 - y) * 2
+                width = min(width, max_width)
+                height = min(height, max_height)
+                area_size = width * height
+
                 density = np.random.uniform(area_type['density_range'][0],
                                             area_type['density_range'][1])
-                area_size = np.random.uniform(area_type['size_range'][0],
-                                              area_type['size_range'][1])
+                # area_size = np.random.uniform(area_type['size_range'][0],
+                #                               area_type['size_range'][1])
                 population = int(density * area_size * 1000)
 
                 residential_area = ResidentialArea(
@@ -245,6 +258,8 @@ class AmbulanceSimulation:
                     area=area_size,
                     area_type=area_type['type']
                 )
+                residential_area.set_rectangle_dimensions(width, height)
+
                 areas.append(residential_area)
                 area_id += 1
 
@@ -789,6 +804,7 @@ class AmbulanceSimulation:
         ax.set_xlabel('EW Distance (km)')
         ax.set_ylabel('SN Distance (km)')
         title = f'City Layout - {self.map_type.value.upper()} Planning'
+
         if self.map_type == MapType.RING:
             title += f' (Density Factor: {self.ring_density_factor})'
             has_edge_rings = any(road.get('is_edge_ring', False) for road in self.roads)
@@ -953,24 +969,59 @@ class AmbulanceSimulation:
 
         # residential areas
         if self.residential_areas:
+            high_density_patch = None
+            medium_density_patch = None
+            low_density_patch = None
+
             for area in self.residential_areas:
-                x, y = area.position
+                if area.vertices:
+                    if 'high' in area.area_type:
+                        color = '#e74c3c'
+                        alpha = 0.4
+                        label = 'High Density Area'
+                        if high_density_patch is None:
+                            high_density_patch = patches.Patch(color=color, alpha=alpha, label=label)
+                    elif 'medium' in area.area_type:
+                        color = '#f39c12'
+                        alpha = 0.3
+                        label = 'Medium Density Area'
+                        if medium_density_patch is None:
+                            medium_density_patch = patches.Patch(color=color, alpha=alpha, label=label)
+                    else:
+                        color = '#27ae60'
+                        alpha = 0.25
+                        label = 'Low Density Area'
+                        if low_density_patch is None:
+                            low_density_patch = patches.Patch(color=color, alpha=alpha, label=label)
 
-                if 'high' in area.area_type:
-                    color = '#e74c3c'
-                    size = 100 + (area.population / 5000) * 200
-                    label = 'High Density'
-                elif 'medium' in area.area_type:
-                    color = '#f39c12'
-                    size = 80 + (area.population / 5000) * 150
-                    label = 'Medium Density'
-                else:
-                    color = '#27ae60'
-                    size = 60 + (area.population / 5000) * 100
-                    label = 'Low Density'
+                    rect = patches.Polygon(area.vertices, closed=True,
+                                           facecolor=color, alpha=alpha,
+                                           edgecolor='darkblue', linewidth=1.5)
+                    ax.add_patch(rect)
+                    ax.scatter(area.position[0], area.position[1],
+                               s=50, c=color, alpha=0.8, marker='o',
+                               edgecolors='darkblue', linewidth=1)
+                    ax.text(area.position[0], area.position[1],
+                            f"{area.population:,}", fontsize=8, ha='center', va='center',
+                            bbox=dict(boxstyle="round,pad=0.3", fc="white", ec=color, alpha=0.8))
 
-                ax.scatter(x, y, s=size, c=color, alpha=0.7,
-                           edgecolors='darkblue', linewidth=1)
+                # x, y = area.position
+                #
+                # if 'high' in area.area_type:
+                #     color = '#e74c3c'
+                #     size = 100 + (area.population / 5000) * 200
+                #     label = 'High Density'
+                # elif 'medium' in area.area_type:
+                #     color = '#f39c12'
+                #     size = 80 + (area.population / 5000) * 150
+                #     label = 'Medium Density'
+                # else:
+                #     color = '#27ae60'
+                #     size = 60 + (area.population / 5000) * 100
+                #     label = 'Low Density'
+                #
+                # ax.scatter(x, y, s=size, c=color, alpha=0.7,
+                #            edgecolors='darkblue', linewidth=1)
 
         # hospitals
         for hospital in self.hospitals:
@@ -1002,6 +1053,58 @@ class AmbulanceSimulation:
                                         fill=True, linestyle='--', alpha=0.15, color='#27ae60')
                 ax.add_patch(circle)
 
+        # demand poiots
+        if show_emergencies and hasattr(self, 'emergencies') and self.emergencies:
+            emergency_legend_elements = []
+            priority1_legend = None
+            priority2_legend = None
+            priority3_legend = None
+
+            for emergency in self.emergencies:
+                x, y = emergency.position
+
+                if emergency.priority == EmergencyPriority.PRIORITY_1:
+                    color = '#ff0000'  # 红
+                    size = 120
+                    marker = '*'
+                    if priority1_legend is None:
+                        priority1_legend = Line2D([0], [0], marker='*', color='w',
+                                                  markerfacecolor=color, markersize=10,
+                                                  label='Priority 1 Emergency',
+                                                  markeredgecolor='black')
+                elif emergency.priority == EmergencyPriority.PRIORITY_2:
+                    color = '#ff9900'  # 橙
+                    size = 80
+                    marker = '^'
+                    if priority2_legend is None:
+                        priority2_legend = Line2D([0], [0], marker='^', color='w',
+                                                  markerfacecolor=color, markersize=8,
+                                                  label='Priority 2 Emergency',
+                                                  markeredgecolor='black')
+                else:
+                    color = '#ffff00'  # 黄
+                    size = 60
+                    marker = 'o'
+                    if priority3_legend is None:
+                        priority3_legend = Line2D([0], [0], marker='o', color='w',
+                                                  markerfacecolor=color, markersize=6,
+                                                  label='Priority 3 Emergency',
+                                                  markeredgecolor='black')
+
+                ax.scatter(x, y, s=size, c=color, marker=marker, alpha=0.8,
+                           edgecolors='black', linewidth=1.5, zorder=10,
+                           label='Emergency Event')
+
+                ax.text(x, y + 0.5, emergency.id, fontsize=7, ha='center', va='bottom',
+                        bbox=dict(boxstyle="round,pad=0.2", fc="white", ec=color, alpha=0.8))
+
+            if priority1_legend:
+                emergency_legend_elements.append(priority1_legend)
+            if priority2_legend:
+                emergency_legend_elements.append(priority2_legend)
+            if priority3_legend:
+                emergency_legend_elements.append(priority3_legend)
+
         if self.map_type == MapType.RING:
             legend_elements = [
                 Line2D([0], [0], marker='^', color='w', markerfacecolor='#c0392b',
@@ -1026,6 +1129,33 @@ class AmbulanceSimulation:
                 Line2D([0], [0], color='#95a5a6', linewidth=1, linestyle=':', label='Connector Road'),
                 Line2D([0], [0], color='#2c3e50', linewidth=2, linestyle='--', label='City Boundary'),
             ]
+            if high_density_patch:
+                legend_elements.append(high_density_patch)
+            if medium_density_patch:
+                legend_elements.append(medium_density_patch)
+            if low_density_patch:
+                legend_elements.append(low_density_patch)
+            if show_emergencies and hasattr(self, 'emergencies') and self.emergencies:
+                legend_elements.extend([
+                    Line2D([0], [0], marker='*', color='w', markerfacecolor='#ff0000',
+                           markersize=10, label='Priority 1 Emergency', markeredgecolor='black'),
+                    Line2D([0], [0], marker='^', color='w', markerfacecolor='#ff9900',
+                           markersize=8, label='Priority 2 Emergency', markeredgecolor='black'),
+                    Line2D([0], [0], marker='o', color='w', markerfacecolor='#ffff00',
+                           markersize=6, label='Priority 3 Emergency', markeredgecolor='black')
+                ])
+            legend_elements.extend([
+                Line2D([0], [0], color='#e74c3c', linewidth=3, label='Core Ring Road'),
+                Line2D([0], [0], color='#f39c12', linewidth=2.5, label='Middle Ring Road'),
+                Line2D([0], [0], color='#3498db', linewidth=2, label='Edge Ring Road'),
+                Line2D([0], [0], color='#e74c3c', linewidth=2, linestyle='-', label='Cardinal Radial Road'),
+                Line2D([0], [0], color='#f39c12', linewidth=1.8, linestyle='-', label='Secondary Radial Road'),
+                Line2D([0], [0], color='#3498db', linewidth=1.6, linestyle='-', label='Edge Radial Road'),
+                Line2D([0], [0], color='#2ecc71', linewidth=1.5, linestyle='-', label='Radial Road (NE)'),
+                Line2D([0], [0], color='#95a5a6', linewidth=1, linestyle=':', label='Connector Road'),
+                Line2D([0], [0], color='#2c3e50', linewidth=2, linestyle='--', label='City Boundary'),
+            ])
+
         else:
             legend_elements = [
                 Line2D([0], [0], marker='^', color='w', markerfacecolor='#c0392b',
@@ -1043,6 +1173,21 @@ class AmbulanceSimulation:
                 Line2D([0], [0], color='#e74c3c', linewidth=3, label='Arterial Road'),
                 Line2D([0], [0], color='#7f8c8d', linewidth=2, linestyle='--', label='Local Road'),
             ]
+            if high_density_patch:
+                legend_elements.append(high_density_patch)
+            if medium_density_patch:
+                legend_elements.append(medium_density_patch)
+            if low_density_patch:
+                legend_elements.append(low_density_patch)
+            if show_emergencies and hasattr(self, 'emergencies') and self.emergencies:
+                legend_elements.extend([
+                    Line2D([0], [0], marker='*', color='w', markerfacecolor='#ff0000',
+                           markersize=10, label='Priority 1 Emergency', markeredgecolor='black'),
+                    Line2D([0], [0], marker='^', color='w', markerfacecolor='#ff9900',
+                           markersize=8, label='Priority 2 Emergency', markeredgecolor='black'),
+                    Line2D([0], [0], marker='o', color='w', markerfacecolor='#ffff00',
+                           markersize=6, label='Priority 3 Emergency', markeredgecolor='black')
+                ])
 
         ax.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(0.02, 0.98))
 
@@ -1092,6 +1237,21 @@ class AmbulanceSimulation:
                     • Total Roads: {len(self.roads)}
                     {ring_info}
                     """
+
+        if hasattr(self, 'emergencies') and self.emergencies:
+            stats_text += f"• Total Emergencies: {len(self.emergencies)}\n"
+            priority_counts = {1: 0, 2: 0, 3: 0}
+            for emergency in self.emergencies:
+                if emergency.priority == EmergencyPriority.PRIORITY_1:
+                    priority_counts[1] += 1
+                elif emergency.priority == EmergencyPriority.PRIORITY_2:
+                    priority_counts[2] += 1
+                else:
+                    priority_counts[3] += 1
+
+            stats_text += f"  - Priority 1: {priority_counts[1]}\n"
+            stats_text += f"  - Priority 2: {priority_counts[2]}\n"
+            stats_text += f"  - Priority 3: {priority_counts[3]}\n"
 
         ax.text(0.98, 0.98, stats_text, transform=ax.transAxes,
                 fontsize=10, verticalalignment='top', horizontalalignment='right',
@@ -1538,3 +1698,129 @@ class AmbulanceSimulation:
                     break
 
         return angles
+
+    def generate_emergency_events(self, n_events: int = 50, time_period: float = 24 * 60):
+        """
+        n_events: 要生成的事件数量
+        time_period: 时间周期（分钟），时间段内随机分布
+        """
+        from param import Emergency, EmergencyPriority
+
+        self.emergencies = []
+
+        if not self.residential_areas:
+            print("Warning: No residential areas available for generating emergencies")
+            return
+
+        population_weights = [area.population for area in self.residential_areas]
+        emergency_types = ['cardiac', 'trauma', 'respiratory', 'stroke', 'burn', 'other']
+        type_weights = [0.15, 0.25, 0.20, 0.10, 0.05, 0.25]
+        priority_weights = [0.15, 0.35, 0.50]  # P1, P2, P3
+
+        for i in range(n_events):
+            chosen_area = np.random.choice(self.residential_areas,
+                                           p=np.array(population_weights) / sum(population_weights))
+
+            if chosen_area.vertices:
+                min_x = min(v[0] for v in chosen_area.vertices)
+                max_x = max(v[0] for v in chosen_area.vertices)
+                min_y = min(v[1] for v in chosen_area.vertices)
+                max_y = max(v[1] for v in chosen_area.vertices)
+                x = np.random.uniform(min_x, max_x)
+                y = np.random.uniform(min_y, max_y)
+            else:
+                x = np.random.normal(chosen_area.position[0], chosen_area.width / 4 if chosen_area.width else 1)
+                y = np.random.normal(chosen_area.position[1], chosen_area.height / 4 if chosen_area.height else 1)
+
+            x = np.clip(x, 0, self.city_width)
+            y = np.clip(y, 0, self.city_height)
+
+            emergency_type = np.random.choice(emergency_types, p=type_weights)
+
+            if emergency_type in ['cardiac', 'stroke']:
+                priority_adj = [0.4, 0.4, 0.2]  # 更高概率为P1
+            elif emergency_type in ['trauma', 'burn']:
+                priority_adj = [0.3, 0.5, 0.2]
+            else:
+                priority_adj = [0.1, 0.3, 0.6]
+
+            priority_idx = np.random.choice([0, 1, 2], p=priority_adj)
+
+            if priority_idx == 0:
+                priority = EmergencyPriority.PRIORITY_1
+            elif priority_idx == 1:
+                priority = EmergencyPriority.PRIORITY_2
+            else:
+                priority = EmergencyPriority.PRIORITY_3
+
+            timestamp = np.random.uniform(0, time_period)
+            emergency = Emergency(
+                id=f'E{i + 1}',
+                position=(x, y),
+                emergency_type=emergency_type,
+                priority=priority,
+                timestamp=timestamp,
+                residential_area_id=chosen_area.id
+            )
+
+            self.emergencies.append(emergency)
+
+        print(f"Generated {n_events} emergency events")
+        self._print_emergency_stats()
+
+    def _print_emergency_stats(self):
+        if not self.emergencies:
+            print("No emergency events generated")
+            return
+
+        priority_counts = {1: 0, 2: 0, 3: 0}
+        type_counts = {}
+
+        for emergency in self.emergencies:
+            if emergency.priority == EmergencyPriority.PRIORITY_1:
+                priority_counts[1] += 1
+            elif emergency.priority == EmergencyPriority.PRIORITY_2:
+                priority_counts[2] += 1
+            else:
+                priority_counts[3] += 1
+
+            if emergency.emergency_type in type_counts:
+                type_counts[emergency.emergency_type] += 1
+            else:
+                type_counts[emergency.emergency_type] = 1
+
+        print("\n=== Emergency Event Statistics ===")
+        print(f"Total events: {len(self.emergencies)}")
+        print(f"Priority distribution:")
+        print(f"  Priority 1: {priority_counts[1]} ({priority_counts[1] / len(self.emergencies) * 100:.1f}%)")
+        print(f"  Priority 2: {priority_counts[2]} ({priority_counts[2] / len(self.emergencies) * 100:.1f}%)")
+        print(f"  Priority 3: {priority_counts[3]} ({priority_counts[3] / len(self.emergencies) * 100:.1f}%)")
+
+        print(f"\nEvent type distribution:")
+        for event_type, count in type_counts.items():
+            print(f"  {event_type}: {count} ({count / len(self.emergencies) * 100:.1f}%)")
+
+    def save_emergency_events(self):
+        if not hasattr(self, 'emergencies') or not self.emergencies:
+            print("No emergency events to save")
+            return
+
+        output_dir = "simulation_results"
+        os.makedirs(output_dir, exist_ok=True)
+
+        emergency_data = []
+        for emergency in self.emergencies:
+            emergency_data.append({
+                'id': emergency.id,
+                'position': emergency.position,
+                'emergency_type': emergency.emergency_type,
+                'priority': emergency.priority.value,
+                'timestamp': emergency.timestamp,
+                'residential_area_id': emergency.residential_area_id
+            })
+
+        filename = os.path.join(output_dir, f"{self.formatted_time}_emergency_events.json")
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(emergency_data, f, ensure_ascii=False, indent=2)
+
+        print(f"Emergency events saved to {filename}")

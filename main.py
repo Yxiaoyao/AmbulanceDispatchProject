@@ -22,12 +22,16 @@ class AmbulanceDispatch(AmbulanceSimulation):
     def run_simulation(self, simulation_time: float = 24 * 60):
         self.gen_city_layout()
 
+        print("gen emergency events ... ")
+        self.generate_emergency_events(n_events=30, time_period=simulation_time)
+
         self.event_sim = EventSimulator(self)
         self.game_theoretic_dispatcher = GameTheory(self)
         fig, ax = self.visualize_city_layout(save_plot=True)
 
         performance_stats = self.event_sim.run_simulation(simulation_time)
         self._analyze_simulation_results(performance_stats)
+        self.save_emergency_events()
         return performance_stats
 
     def _analyze_simulation_results(self, stats: Dict):
@@ -159,7 +163,9 @@ def ring_density_variations():
             ring_density_factor=density_factor,
             random_seed=42
         )
+
         simulation.gen_city_layout()
+        simulation.generate_emergency_events(n_events=20, time_period=8*60)
         simulation.visualize_city_layout(save_plot=True)
         center_x, center_y = simulation.city_center
         max_radius = min(simulation.city_width, simulation.city_height) * 0.45

@@ -1,0 +1,1003 @@
+[
+  {
+    "id": "E1",
+    "position": [
+      7.886569217809859,
+      8.399051864529442
+    ],
+    "emergency_type": "cardiac",
+    "priority": 2,
+    "timestamp": 200.35728151141393,
+    "residential_area_id": "R7"
+  },
+  {
+    "id": "E2",
+    "position": [
+      19.758001157658548,
+      30.118045028833393
+    ],
+    "emergency_type": "other",
+    "priority": 2,
+    "timestamp": 249.01949843681572,
+    "residential_area_id": "R2"
+  },
+  {
+    "id": "E3",
+    "position": [
+      29.138161147905528,
+      13.585875645974427
+    ],
+    "emergency_type": "other",
+    "priority": 2,
+    "timestamp": 238.679282828345,
+    "residential_area_id": "R9"
+  },
+  {
+    "id": "E4",
+    "position": [
+      44.192330293739815,
+      36.84511998723096
+    ],
+    "emergency_type": "stroke",
+    "priority": 2,
+    "timestamp": 24.70980059999489,
+    "residential_area_id": "R3"
+  },
+  {
+    "id": "E5",
+    "position": [
+      45.431697164401484,
+      37.26729512368159
+    ],
+    "emergency_type": "cardiac",
+    "priority": 2,
+    "timestamp": 473.1122179730883,
+    "residential_area_id": "R3"
+  },
+  {
+    "id": "E6",
+    "position": [
+      44.962271114839496,
+      38.354749682898685
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 176.53590370524154,
+    "residential_area_id": "R3"
+  },
+  {
+    "id": "E7",
+    "position": [
+      30.08863329882233,
+      12.224418827018612
+    ],
+    "emergency_type": "cardiac",
+    "priority": 3,
+    "timestamp": 153.9744311864332,
+    "residential_area_id": "R9"
+  },
+  {
+    "id": "E8",
+    "position": [
+      19.61743554805454,
+      30.866323037625545
+    ],
+    "emergency_type": "stroke",
+    "priority": 1,
+    "timestamp": 245.80466798365487,
+    "residential_area_id": "R2"
+  },
+  {
+    "id": "E9",
+    "position": [
+      20.69162041878648,
+      29.63574670853802
+    ],
+    "emergency_type": "stroke",
+    "priority": 1,
+    "timestamp": 449.63039459363256,
+    "residential_area_id": "R2"
+  },
+  {
+    "id": "E10",
+    "position": [
+      20.15113761434337,
+      29.45584610592904
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 123.81198130327469,
+    "residential_area_id": "R2"
+  },
+  {
+    "id": "E11",
+    "position": [
+      30.7355192767218,
+      12.285077966901406
+    ],
+    "emergency_type": "respiratory",
+    "priority": 2,
+    "timestamp": 44.68932854683162,
+    "residential_area_id": "R9"
+  },
+  {
+    "id": "E12",
+    "position": [
+      21.87310333822252,
+      19.027872394894594
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 348.4587258577149,
+    "residential_area_id": "R11"
+  },
+  {
+    "id": "E13",
+    "position": [
+      21.838058315347958,
+      19.470710571416138
+    ],
+    "emergency_type": "stroke",
+    "priority": 1,
+    "timestamp": 77.5817827654146,
+    "residential_area_id": "R11"
+  },
+  {
+    "id": "E14",
+    "position": [
+      21.100290943743172,
+      17.14546459397032
+    ],
+    "emergency_type": "cardiac",
+    "priority": 2,
+    "timestamp": 2.4295602461849697,
+    "residential_area_id": "R11"
+  },
+  {
+    "id": "E15",
+    "position": [
+      20.52022114867838,
+      31.164721769387842
+    ],
+    "emergency_type": "stroke",
+    "priority": 1,
+    "timestamp": 341.8460262468172,
+    "residential_area_id": "R2"
+  },
+  {
+    "id": "E16",
+    "position": [
+      44.27296180818526,
+      38.32323737996882
+    ],
+    "emergency_type": "stroke",
+    "priority": 3,
+    "timestamp": 315.6541883041648,
+    "residential_area_id": "R3"
+  },
+  {
+    "id": "E17",
+    "position": [
+      30.11305095045871,
+      6.900007301616834
+    ],
+    "emergency_type": "trauma",
+    "priority": 1,
+    "timestamp": 467.0450662811739,
+    "residential_area_id": "R8"
+  },
+  {
+    "id": "E18",
+    "position": [
+      38.44127027679148,
+      38.12433165265488
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 276.91386462065236,
+    "residential_area_id": "R4"
+  },
+  {
+    "id": "E19",
+    "position": [
+      30.445698545386797,
+      8.238933078901402
+    ],
+    "emergency_type": "trauma",
+    "priority": 1,
+    "timestamp": 309.8267020354406,
+    "residential_area_id": "R8"
+  },
+  {
+    "id": "E20",
+    "position": [
+      21.216426451697444,
+      31.938867143162792
+    ],
+    "emergency_type": "other",
+    "priority": 2,
+    "timestamp": 7.419175933856366,
+    "residential_area_id": "R2"
+  },
+  {
+    "id": "E21",
+    "position": [
+      20.631736413104893,
+      20.034250045907164
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 141.33546819340114,
+    "residential_area_id": "R11"
+  },
+  {
+    "id": "E22",
+    "position": [
+      38.33067877356821,
+      37.61786914438554
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 449.3542915971749,
+    "residential_area_id": "R4"
+  },
+  {
+    "id": "E23",
+    "position": [
+      29.865124383878406,
+      10.85487212018488
+    ],
+    "emergency_type": "stroke",
+    "priority": 3,
+    "timestamp": 67.24032731353154,
+    "residential_area_id": "R9"
+  },
+  {
+    "id": "E24",
+    "position": [
+      32.67975297679299,
+      8.308067352708708
+    ],
+    "emergency_type": "stroke",
+    "priority": 2,
+    "timestamp": 172.55575258548248,
+    "residential_area_id": "R8"
+  },
+  {
+    "id": "E25",
+    "position": [
+      45.23507500564364,
+      38.45576299801148
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 245.44435145325014,
+    "residential_area_id": "R3"
+  },
+  {
+    "id": "E26",
+    "position": [
+      32.42076378791777,
+      7.965331828013527
+    ],
+    "emergency_type": "burn",
+    "priority": 2,
+    "timestamp": 427.2025640724318,
+    "residential_area_id": "R8"
+  },
+  {
+    "id": "E27",
+    "position": [
+      37.04511655904872,
+      37.258528558355515
+    ],
+    "emergency_type": "respiratory",
+    "priority": 1,
+    "timestamp": 223.48704870358088,
+    "residential_area_id": "R4"
+  },
+  {
+    "id": "E28",
+    "position": [
+      30.744710855138294,
+      7.7421475194234475
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 394.84826911663595,
+    "residential_area_id": "R8"
+  },
+  {
+    "id": "E29",
+    "position": [
+      36.37328697255456,
+      37.94881127430406
+    ],
+    "emergency_type": "other",
+    "priority": 2,
+    "timestamp": 298.9874283931201,
+    "residential_area_id": "R4"
+  },
+  {
+    "id": "E30",
+    "position": [
+      37.99285362478745,
+      38.9008655199124
+    ],
+    "emergency_type": "respiratory",
+    "priority": 3,
+    "timestamp": 348.5238401868775,
+    "residential_area_id": "R1"
+  },
+  {
+    "id": "E1",
+    "position": [
+      32.21526962016762,
+      17.281015619029965
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 41.37285565222214,
+    "residential_area_id": "R9"
+  },
+  {
+    "id": "E2",
+    "position": [
+      47.07091675863864,
+      37.346743801583635
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 49.44275697700388,
+    "residential_area_id": "R3"
+  },
+  {
+    "id": "E3",
+    "position": [
+      20.175968572208244,
+      29.61001686065655
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 53.7763093559592,
+    "residential_area_id": "R2"
+  },
+  {
+    "id": "E4",
+    "position": [
+      14.437636625661845,
+      35.33634433169073
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 71.3946869085446,
+    "residential_area_id": "R2"
+  },
+  {
+    "id": "E5",
+    "position": [
+      12.414294060223133,
+      53.33651080564202
+    ],
+    "emergency_type": "respiratory",
+    "priority": 2,
+    "timestamp": 74.90414763561279,
+    "residential_area_id": "R12"
+  },
+  {
+    "id": "E6",
+    "position": [
+      25.86331598416492,
+      5.3014915654940555
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 81.3261857608717,
+    "residential_area_id": "R8"
+  },
+  {
+    "id": "E7",
+    "position": [
+      37.3998055487223,
+      38.07739108836652
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 82.23402096735691,
+    "residential_area_id": "R4"
+  },
+  {
+    "id": "E8",
+    "position": [
+      43.04483727169282,
+      39.989766618598495
+    ],
+    "emergency_type": "respiratory",
+    "priority": 2,
+    "timestamp": 82.51932774003996,
+    "residential_area_id": "R3"
+  },
+  {
+    "id": "E9",
+    "position": [
+      36.87284470427404,
+      7.8041653658572665
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 119.0457713319133,
+    "residential_area_id": "R8"
+  },
+  {
+    "id": "E10",
+    "position": [
+      32.038717950120784,
+      11.435662298331856
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 139.13207846652512,
+    "residential_area_id": "R8"
+  },
+  {
+    "id": "E11",
+    "position": [
+      41.048725056452625,
+      36.867961322630926
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 152.36144216429557,
+    "residential_area_id": "R3"
+  },
+  {
+    "id": "E12",
+    "position": [
+      15.073999342155311,
+      53.79436416509812
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 158.20432710279715,
+    "residential_area_id": "R12"
+  },
+  {
+    "id": "E13",
+    "position": [
+      9.437951406576929,
+      51.405333823729435
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 160.3188441710428,
+    "residential_area_id": "R12"
+  },
+  {
+    "id": "E14",
+    "position": [
+      24.138093181453474,
+      24.44220281963089
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 162.2090746329634,
+    "residential_area_id": "R2"
+  },
+  {
+    "id": "E15",
+    "position": [
+      23.921742062356884,
+      18.146514106460582
+    ],
+    "emergency_type": "respiratory",
+    "priority": 2,
+    "timestamp": 165.4091411788143,
+    "residential_area_id": "R11"
+  },
+  {
+    "id": "E16",
+    "position": [
+      42.63970228204476,
+      38.17229074165913
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 174.2623706045178,
+    "residential_area_id": "R4"
+  },
+  {
+    "id": "E17",
+    "position": [
+      37.32993869448638,
+      40.70037801412707
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 188.19402935759308,
+    "residential_area_id": "R4"
+  },
+  {
+    "id": "E18",
+    "position": [
+      30.962628133602063,
+      11.99827881169694
+    ],
+    "emergency_type": "respiratory",
+    "priority": 2,
+    "timestamp": 200.18725546533528,
+    "residential_area_id": "R9"
+  },
+  {
+    "id": "E19",
+    "position": [
+      0.0,
+      30.222620933328407
+    ],
+    "emergency_type": "respiratory",
+    "priority": 2,
+    "timestamp": 203.83628059187967,
+    "residential_area_id": "R10"
+  },
+  {
+    "id": "E20",
+    "position": [
+      8.960801851642405,
+      50.71101017596643
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 238.25965279806087,
+    "residential_area_id": "R12"
+  },
+  {
+    "id": "E21",
+    "position": [
+      28.013343731670503,
+      17.508526453739265
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 253.13762396334116,
+    "residential_area_id": "R11"
+  },
+  {
+    "id": "E22",
+    "position": [
+      35.525550935405114,
+      35.137904097271715
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 262.11796265146705,
+    "residential_area_id": "R4"
+  },
+  {
+    "id": "E23",
+    "position": [
+      38.623720073280786,
+      35.228868084977755
+    ],
+    "emergency_type": "respiratory",
+    "priority": 2,
+    "timestamp": 272.62941234077186,
+    "residential_area_id": "R1"
+  },
+  {
+    "id": "E24",
+    "position": [
+      39.199485343706776,
+      30.862407498302773
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 278.6742775133502,
+    "residential_area_id": "R1"
+  },
+  {
+    "id": "E25",
+    "position": [
+      1.5007074754184218,
+      31.283470759192944
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 281.8371807608398,
+    "residential_area_id": "R10"
+  },
+  {
+    "id": "E26",
+    "position": [
+      31.0506646160273,
+      6.62591054746598
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 286.7262266422077,
+    "residential_area_id": "R8"
+  },
+  {
+    "id": "E27",
+    "position": [
+      18.963765584858503,
+      16.61092263785069
+    ],
+    "emergency_type": "respiratory",
+    "priority": 2,
+    "timestamp": 302.48380272839336,
+    "residential_area_id": "R11"
+  },
+  {
+    "id": "E28",
+    "position": [
+      19.857838661464594,
+      10.569562403532522
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 302.64489250306895,
+    "residential_area_id": "R11"
+  },
+  {
+    "id": "E29",
+    "position": [
+      36.805491693711836,
+      31.17976101659864
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 304.0157857501798,
+    "residential_area_id": "R1"
+  },
+  {
+    "id": "E30",
+    "position": [
+      32.59830638564039,
+      8.65493496973837
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 304.5390566052078,
+    "residential_area_id": "R9"
+  },
+  {
+    "id": "E31",
+    "position": [
+      39.09849829160913,
+      42.24239726051104
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 305.00107273762217,
+    "residential_area_id": "R1"
+  },
+  {
+    "id": "E32",
+    "position": [
+      36.72728467074723,
+      37.74569093938254
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 326.4922175555739,
+    "residential_area_id": "R4"
+  },
+  {
+    "id": "E33",
+    "position": [
+      35.52339478506846,
+      15.198449579349342
+    ],
+    "emergency_type": "respiratory",
+    "priority": 2,
+    "timestamp": 340.006002130026,
+    "residential_area_id": "R9"
+  },
+  {
+    "id": "E34",
+    "position": [
+      3.981169351931574,
+      7.620200095332041
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 347.14805317905814,
+    "residential_area_id": "R7"
+  },
+  {
+    "id": "E35",
+    "position": [
+      28.743760389703276,
+      34.14865544651733
+    ],
+    "emergency_type": "respiratory",
+    "priority": 2,
+    "timestamp": 348.2920189395894,
+    "residential_area_id": "R2"
+  },
+  {
+    "id": "E36",
+    "position": [
+      11.456941354316346,
+      46.664746824673465
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 355.80888522622536,
+    "residential_area_id": "R12"
+  },
+  {
+    "id": "E37",
+    "position": [
+      24.062141017856092,
+      25.309244721752528
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 362.93611113838506,
+    "residential_area_id": "R11"
+  },
+  {
+    "id": "E38",
+    "position": [
+      0.0,
+      32.504933400040166
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 365.0493857250542,
+    "residential_area_id": "R10"
+  },
+  {
+    "id": "E39",
+    "position": [
+      18.360228742643876,
+      27.573823328232432
+    ],
+    "emergency_type": "respiratory",
+    "priority": 2,
+    "timestamp": 371.3704871839689,
+    "residential_area_id": "R2"
+  },
+  {
+    "id": "E40",
+    "position": [
+      35.86040809605242,
+      40.20603956082534
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 377.018671790449,
+    "residential_area_id": "R3"
+  },
+  {
+    "id": "E41",
+    "position": [
+      22.186406042936348,
+      18.329105566371656
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 387.6489210450394,
+    "residential_area_id": "R11"
+  },
+  {
+    "id": "E42",
+    "position": [
+      22.18681763416525,
+      27.17634766531686
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 398.8501936677162,
+    "residential_area_id": "R2"
+  },
+  {
+    "id": "E43",
+    "position": [
+      13.162846587609586,
+      51.63400864553616
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 399.3653306012777,
+    "residential_area_id": "R12"
+  },
+  {
+    "id": "E44",
+    "position": [
+      36.67914317681127,
+      40.84931155352162
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 404.58070843077843,
+    "residential_area_id": "R1"
+  },
+  {
+    "id": "E45",
+    "position": [
+      31.853472668035295,
+      6.297390212084905
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 415.50431948391986,
+    "residential_area_id": "R9"
+  },
+  {
+    "id": "E46",
+    "position": [
+      29.098469144789814,
+      10.686599948302836
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 423.27586895733975,
+    "residential_area_id": "R9"
+  },
+  {
+    "id": "E47",
+    "position": [
+      36.891435956984395,
+      41.51309504466933
+    ],
+    "emergency_type": "respiratory",
+    "priority": 2,
+    "timestamp": 430.4660521172488,
+    "residential_area_id": "R1"
+  },
+  {
+    "id": "E48",
+    "position": [
+      42.08837963329085,
+      46.328260129790706
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 434.44744013226733,
+    "residential_area_id": "R3"
+  },
+  {
+    "id": "E49",
+    "position": [
+      23.422547903117866,
+      8.498508688406233
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 435.10615446103515,
+    "residential_area_id": "R9"
+  },
+  {
+    "id": "E50",
+    "position": [
+      4.543799248758779,
+      30.84741978863294
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 435.3772005212434,
+    "residential_area_id": "R10"
+  },
+  {
+    "id": "E51",
+    "position": [
+      46.32822069969579,
+      43.340261188145455
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 439.18606773275786,
+    "residential_area_id": "R3"
+  },
+  {
+    "id": "E52",
+    "position": [
+      20.401041383715754,
+      19.024339590852502
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 439.28558281671116,
+    "residential_area_id": "R11"
+  },
+  {
+    "id": "E53",
+    "position": [
+      19.11389781724162,
+      17.112332822738395
+    ],
+    "emergency_type": "respiratory",
+    "priority": 2,
+    "timestamp": 442.5498323641456,
+    "residential_area_id": "R11"
+  },
+  {
+    "id": "E54",
+    "position": [
+      28.672687446943105,
+      15.429369711841197
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 452.98411182854244,
+    "residential_area_id": "R9"
+  },
+  {
+    "id": "E55",
+    "position": [
+      38.12289722936095,
+      43.405899729513614
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 456.1573801454963,
+    "residential_area_id": "R1"
+  },
+  {
+    "id": "E56",
+    "position": [
+      27.250953490620354,
+      4.306555753335654
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 457.97701233891814,
+    "residential_area_id": "R9"
+  },
+  {
+    "id": "E57",
+    "position": [
+      24.11418311983075,
+      27.64538365425264
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 461.79489070130694,
+    "residential_area_id": "R2"
+  },
+  {
+    "id": "E58",
+    "position": [
+      39.08918464326783,
+      37.86597882063601
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 464.0650980126073,
+    "residential_area_id": "R3"
+  },
+  {
+    "id": "E59",
+    "position": [
+      11.978058187501704,
+      51.885021128842425
+    ],
+    "emergency_type": "cardiac",
+    "priority": 1,
+    "timestamp": 466.9866326814085,
+    "residential_area_id": "R12"
+  },
+  {
+    "id": "E60",
+    "position": [
+      15.645467741265904,
+      22.629425631331323
+    ],
+    "emergency_type": "other",
+    "priority": 3,
+    "timestamp": 477.49821470449365,
+    "residential_area_id": "R11"
+  },
+  {
+    "id": "E61",
+    "position": [
+      13.999920944837744,
+      47.550646015082094
+    ],
+    "emergency_type": "trauma",
+    "priority": 2,
+    "timestamp": 479.3053536946795,
+    "residential_area_id": "R12"
+  }
+]

@@ -58,3 +58,36 @@ class Emergency:
 class MapType(Enum):
     GRID = "grid"  # 方型
     RING = "ring"  # 环形
+
+
+class ResidentialArea:
+    def __init__(self, id, name, position, population, density, area, area_type):
+        self.id = id
+        self.name = name
+        self.position = position
+        self.population = population
+        self.density = density
+        self.area = area
+        self.area_type = area_type
+
+        self.width = None
+        self.height = None
+        self.vertices = None
+
+    def set_rectangle_dimensions(self, width, height):
+        self.width = width
+        self.height = height
+        self._calculate_vertices()
+
+    def _calculate_vertices(self):
+        if self.width is not None and self.height is not None:
+            x, y = self.position
+            half_width = self.width / 2
+            half_height = self.height / 2
+
+            self.vertices = [
+                (x - half_width, y - half_height),  # 左下角
+                (x + half_width, y - half_height),  # 右下角
+                (x + half_width, y + half_height),  # 右上角
+                (x - half_width, y + half_height),  # 左上角
+            ]
